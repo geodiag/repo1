@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #f6f6f6;
+  color: #111827;
+}
+
+/* Le fameux liseré de l'État */
+.liseret-tricolore {
+  height: 4px;
+  background: linear-gradient(90deg, #000091 0%, #000091 33%, #fff 33%, #fff 66%, #e1000f 66%, #e1000f 100%);
+}
