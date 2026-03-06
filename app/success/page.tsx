@@ -121,7 +121,7 @@ function SuccessContent() {
             <div className="text-5xl mb-6">📄</div>
             <h1 className="text-xl font-extrabold text-gray-900 mb-2">Paiement confirmé !</h1>
             <p className="text-sm text-gray-600 mb-4">
-              Génération de votre rapport ERP officiel en cours depuis les serveurs de <strong>Géorisques.gouv.fr</strong>…
+              Génération de votre rapport ERP officiel en cours depuis les registres officiels de l'État…
             </p>
             <div className="w-10 h-10 border-4 border-gray-200 border-t-bleu-france rounded-full animate-spin mx-auto"></div>
           </>
@@ -135,7 +135,7 @@ function SuccessContent() {
             </div>
             <h1 className="text-2xl font-extrabold text-gray-900 mb-3">Votre ERP est téléchargé !</h1>
             <p className="text-sm text-gray-600 mb-2">
-              Le rapport officiel a été généré directement depuis <strong>Géorisques.gouv.fr</strong> et enregistré sur votre appareil.
+              Votre rapport officiel a été généré depuis les bases de données publiques de l'État et enregistré sur votre appareil.
             </p>
             {adresse && (
               <p className="text-xs font-mono bg-gray-100 border border-gray-200 px-3 py-2 mt-4 text-gray-700">

@@ -317,7 +317,7 @@ export default function AddressSearch({ onResultsChange, onAddressSelect }: Addr
                 <div>
                   <p className="font-extrabold text-gray-900 text-sm mb-0.5">Rapport ERP Officiel</p>
                   <p className="text-xs text-gray-500 leading-relaxed">
-                    Certifié Géorisques.gouv.fr · Valable 6 mois · Valeur légale
+                    Données officielles de l'État · Valable 6 mois · Valeur légale
                   </p>
                 </div>
               </div>

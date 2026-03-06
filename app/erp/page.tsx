@@ -52,14 +52,14 @@ const etapes = [
   {
     num: "04",
     titre: "Téléchargement immédiat",
-    desc: "Le rapport ERP officiel est généré directement depuis les serveurs de Géorisques.gouv.fr et téléchargé instantanément sur votre appareil. Document conforme, valeur légale garantie.",
+    desc: "Votre rapport ERP officiel est généré depuis les bases de données publiques de l'État et téléchargé instantanément sur votre appareil. Document conforme, valeur légale garantie.",
   },
 ];
 
 const faqErp = [
   {
     q: "L'ERP Géodiag a-t-il la même valeur légale qu'un ERP classique ?",
-    a: "Oui. Notre plateforme génère le rapport directement depuis les serveurs officiels de Géorisques.gouv.fr. Le document produit est identique à celui que fournirait un diagnostiqueur ou la mairie. Il est conforme aux exigences du Code de l'environnement (art. L125-5).",
+    a: "Oui. Notre plateforme s'appuie sur les données officielles de l'État, issues du registre national des risques prévu par la réglementation. Le document produit est identique à celui que fournirait un diagnostiqueur ou la mairie, et est conforme aux exigences du Code de l'environnement (art. L125-5). Il existe par ailleurs un site gouvernemental recensant ces informations, mais notre service vous simplifie la démarche et vous délivre un document mis en forme, prêt à remettre.",
   },
   {
     q: "Mon bien n'est dans aucune zone à risque — ai-je quand même besoin d'un ERP ?",

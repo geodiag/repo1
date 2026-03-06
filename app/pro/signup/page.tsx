@@ -48,6 +48,13 @@ export default function ProSignupPage() {
         id: data.user.id,
         company,
       });
+
+      // Notifier l'admin par email (non bloquant)
+      fetch("/api/pro/notify-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company, email }),
+      }).catch(() => {/* silencieux */});
     }
 
     setSuccess(true);

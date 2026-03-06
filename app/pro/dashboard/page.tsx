@@ -159,45 +159,51 @@ export default function ProDashboard() {
 
       {/* Header */}
       <header className="bg-white border-b border-gray-200 mt-1 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <img src="/logo.png" alt="Géodiag" className="h-10 w-auto bg-slate-200" />
-            <div className="hidden sm:block border-l border-gray-200 pl-4">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Géodiag" className="h-9 w-auto bg-slate-200" />
+            <div className="hidden sm:block border-l border-gray-200 pl-3">
               <p className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Espace Pro</p>
-              <p className="text-sm font-bold text-gray-800">{user?.email}</p>
+              <p className="text-xs font-bold text-gray-800 truncate max-w-[180px]">{user?.email}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* Badge crédits */}
             <button
               onClick={() => setShowRecharge(v => !v)}
-              className={`flex items-center gap-3 px-4 py-2 rounded-full border-2 font-bold text-sm transition-all shadow-sm ${
-                credits === 0
-                  ? "bg-red-50 border-red-300 text-red-700 hover:bg-red-100"
+              style={{
+                background: credits === 0
+                  ? "linear-gradient(135deg, #7f1d1d, #dc2626)"
                   : credits <= 3
-                  ? "bg-orange-50 border-orange-300 text-orange-700 hover:bg-orange-100"
-                  : "bg-gradient-to-r from-blue-50 to-indigo-50 border-bleu-france text-bleu-france hover:from-blue-100 hover:to-indigo-100"
-              }`}
+                  ? "linear-gradient(135deg, #78350f, #f59e0b)"
+                  : "linear-gradient(135deg, #92400e, #d97706)",
+              }}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg shadow-md hover:shadow-lg hover:scale-[1.02] transition-all"
             >
-              <span className="text-base">🪙</span>
-              <span>{credits} crédit{credits !== 1 ? "s" : ""}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
-                credits === 0 ? "bg-red-200 text-red-800" : "bg-bleu-france text-white"
-              }`}>
-                + Recharger
+              <span className="text-base leading-none">🪙</span>
+              <div className="flex flex-col items-start leading-tight">
+                <span className="text-white font-black text-sm leading-none">
+                  {credits} <span className="font-bold text-xs opacity-80">cr.</span>
+                </span>
+                <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.65)" }}>
+                  {credits === 0 ? "Épuisés" : credits <= 3 ? "Faible" : "Recharger"}
+                </span>
+              </div>
+              <span className="hidden sm:flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black" style={{ background: "rgba(255,255,255,0.2)", color: "white" }}>
+                +
               </span>
             </button>
             <button
               onClick={handleLogout}
-              className="text-xs text-gray-400 font-bold hover:text-gray-700 transition px-2 py-1"
+              className="text-[10px] text-gray-400 font-bold hover:text-gray-700 transition px-2 py-1.5 border border-gray-200 rounded-lg"
             >
-              Déconnexion
+              Quitter
             </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-grow max-w-6xl mx-auto px-4 py-8 w-full">
+      <main className="flex-grow max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8 w-full">
 
         {/* Panneau Recharge */}
         {showRecharge && (
@@ -294,8 +300,39 @@ export default function ProDashboard() {
           </div>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        {/* Stats — barre mobile / cards desktop */}
+        {/* MOBILE */}
+        <div
+          className="sm:hidden rounded-xl overflow-hidden shadow-md mb-4"
+          style={{ background: "linear-gradient(135deg, #003189 0%, #1a56db 100%)" }}
+        >
+          <div className="grid grid-cols-4 divide-x divide-white/10">
+            {[
+              { label: "Leads",     value: leads.length,  icon: "📋", clickable: false },
+              { label: "Nouveaux",  value: newLeads,      icon: "🆕", clickable: false },
+              { label: "Déverr.",   value: unlockedCount, icon: "🔓", clickable: false },
+              { label: "Crédits",   value: credits,       icon: "🪙", clickable: true  },
+            ].map((stat) => (
+              <button
+                key={stat.label}
+                type="button"
+                onClick={stat.clickable ? () => setShowRecharge(v => !v) : undefined}
+                style={stat.clickable ? { background: "linear-gradient(135deg, #92400e 0%, #d97706 100%)" } : {}}
+                className={`flex flex-col items-center justify-center py-3 px-1 gap-0.5 w-full ${stat.clickable ? "cursor-pointer" : "cursor-default"}`}
+              >
+                <span className="text-base leading-none" style={{ opacity: 0.75 }}>{stat.icon}</span>
+                <span className="text-xl font-black text-white leading-none mt-0.5">{stat.value}</span>
+                <span className="text-[8px] uppercase font-black tracking-wide leading-tight" style={{ color: "rgba(255,255,255,0.55)" }}>{stat.label}</span>
+                {stat.clickable && (
+                  <span className="text-[8px] font-bold mt-0.5" style={{ color: "#fcd34d" }}>+ Recharger</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* DESKTOP */}
+        <div className="hidden sm:grid grid-cols-4 gap-4 mb-6">
           {[
             { label: "Leads dispo",   value: leads.length,  icon: "📋", clickable: false },
             { label: "Nouveaux",      value: newLeads,      icon: "🆕", clickable: false },
@@ -368,90 +405,147 @@ export default function ProDashboard() {
           </div>
 
           {leads.length === 0 ? (
-            <div className="p-12 text-center text-gray-400">
+            <div className="p-12 text-center text-gray-400 bg-white">
               <p className="text-4xl mb-3">📭</p>
               <p className="font-bold">Aucun lead disponible pour le moment.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500">
-                    <th className="text-left px-4 py-3">Date</th>
-                    <th className="text-left px-4 py-3">Commune</th>
-                    <th className="text-left px-4 py-3">Projet</th>
-                    <th className="text-left px-4 py-3">Bien</th>
-                    <th className="text-left px-4 py-3">Contact</th>
-                    <th className="text-right px-4 py-3">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leads.map((lead) => {
-                    const isUnlocked = purchases.includes(lead.id);
-                    const revealedData = unlockedData[lead.id];
-
-                    return (
-                      <tr key={lead.id} className={`border-b border-gray-100 ${isUnlocked ? "bg-green-50/30" : "hover:bg-gray-50"}`}>
-                        <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDate(lead.created_at)}</td>
-                        <td className="px-4 py-3 font-bold text-gray-900">📍 {maskStreetNumber(lead.adresse)}</td>
-                        <td className="px-4 py-3">
-                          <span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 uppercase">
-                            {lead.type_projet || "–"}
+            <>
+              {/* ── MOBILE : cartes ── */}
+              <div className="md:hidden bg-white divide-y divide-gray-100">
+                {leads.map((lead) => {
+                  const isUnlocked  = purchases.includes(lead.id);
+                  const revealedData = unlockedData[lead.id];
+                  return (
+                    <div key={lead.id} className={`p-4 ${isUnlocked ? "bg-green-50/30" : ""}`}>
+                      {/* Ligne 1 : adresse + date */}
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div>
+                          <p className="font-bold text-gray-900 text-sm">📍 {maskStreetNumber(lead.adresse)}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(lead.created_at)}</p>
+                        </div>
+                        {isUnlocked && (
+                          <span className="shrink-0 text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
+                            ✅ Déverrouillé
                           </span>
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 text-xs">{lead.type_bien || "–"}</td>
+                        )}
+                      </div>
 
-                        {/* Contact masqué / révélé */}
-                        <td className="px-4 py-3">
-                          {isUnlocked ? (
-                            <div className="space-y-0.5">
-                              <p className="text-xs font-bold text-gray-900">
-                                {revealedData?.email || lead.email || "–"}
-                              </p>
-                              <p className="text-xs text-gray-600">
-                                {revealedData?.telephone || lead.telephone || "–"}
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="space-y-1.5">
-                              <div className="h-3 w-36 bg-gray-200 rounded-sm"></div>
-                              <div className="h-3 w-24 bg-gray-200 rounded-sm"></div>
-                            </div>
-                          )}
-                        </td>
+                      {/* Ligne 2 : badges */}
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {lead.type_projet && (
+                          <span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 uppercase rounded">
+                            {lead.type_projet}
+                          </span>
+                        )}
+                        {lead.type_bien && (
+                          <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded">
+                            {lead.type_bien}
+                          </span>
+                        )}
+                      </div>
 
-                        {/* Bouton */}
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
-                          {isUnlocked ? (
-                            <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
-                              ✅ Déverrouillé
+                      {/* Ligne 3 : contact ou masqué + bouton */}
+                      <div className="flex items-center justify-between gap-3">
+                        {isUnlocked ? (
+                          <div className="text-xs space-y-0.5">
+                            <p className="font-bold text-gray-900">{revealedData?.email || "–"}</p>
+                            <p className="text-gray-500">{revealedData?.telephone || "–"}</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            <div className="h-3 w-32 bg-gray-200 rounded-sm"></div>
+                            <div className="h-3 w-20 bg-gray-200 rounded-sm"></div>
+                          </div>
+                        )}
+
+                        {!isUnlocked && (
+                          <button
+                            onClick={() => handleUnlockWithCredit(lead)}
+                            disabled={unlocking === lead.id}
+                            style={{ background: "linear-gradient(90deg, #003189 0%, #1a56db 100%)" }}
+                            className="shrink-0 inline-flex items-center gap-1.5 text-white text-xs font-bold px-4 py-2 rounded-lg disabled:opacity-60 transition-all"
+                          >
+                            {unlocking === lead.id ? (
+                              <><span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Déverrouillage…</>
+                            ) : (
+                              <><span>🪙</span> 1 crédit</>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ── DESKTOP : tableau ── */}
+              <div className="hidden md:block overflow-x-auto bg-white">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500">
+                      <th className="text-left px-4 py-3">Date</th>
+                      <th className="text-left px-4 py-3">Adresse</th>
+                      <th className="text-left px-4 py-3">Projet</th>
+                      <th className="text-left px-4 py-3">Bien</th>
+                      <th className="text-left px-4 py-3">Contact</th>
+                      <th className="text-right px-4 py-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leads.map((lead) => {
+                      const isUnlocked  = purchases.includes(lead.id);
+                      const revealedData = unlockedData[lead.id];
+                      return (
+                        <tr key={lead.id} className={`border-b border-gray-100 ${isUnlocked ? "bg-green-50/30" : "hover:bg-gray-50"}`}>
+                          <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDate(lead.created_at)}</td>
+                          <td className="px-4 py-3 font-bold text-gray-900">📍 {maskStreetNumber(lead.adresse)}</td>
+                          <td className="px-4 py-3">
+                            <span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 uppercase">
+                              {lead.type_projet || "–"}
                             </span>
-                          ) : (
-                            <button
-                              onClick={() => handleUnlockWithCredit(lead)}
-                              disabled={unlocking === lead.id}
-                              style={{ background: "linear-gradient(90deg, #003189 0%, #1a56db 100%)" }}
-                              className="inline-flex items-center gap-1.5 hover:shadow-md hover:shadow-blue-200 disabled:opacity-60 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all"
-                            >
-                              {unlocking === lead.id ? (
-                                <>
-                                  <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                                  Déverrouillage…
-                                </>
-                              ) : (
-                                <>
-                                  <span>🪙</span> 1 crédit
-                                </>
-                              )}
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                          <td className="px-4 py-3 text-gray-600 text-xs">{lead.type_bien || "–"}</td>
+                          <td className="px-4 py-3">
+                            {isUnlocked ? (
+                              <div className="space-y-0.5">
+                                <p className="text-xs font-bold text-gray-900">{revealedData?.email || "–"}</p>
+                                <p className="text-xs text-gray-600">{revealedData?.telephone || "–"}</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-1.5">
+                                <div className="h-3 w-36 bg-gray-200 rounded-sm"></div>
+                                <div className="h-3 w-24 bg-gray-200 rounded-sm"></div>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            {isUnlocked ? (
+                              <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+                                ✅ Déverrouillé
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleUnlockWithCredit(lead)}
+                                disabled={unlocking === lead.id}
+                                style={{ background: "linear-gradient(90deg, #003189 0%, #1a56db 100%)" }}
+                                className="inline-flex items-center gap-1.5 hover:shadow-md hover:shadow-blue-200 disabled:opacity-60 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all"
+                              >
+                                {unlocking === lead.id ? (
+                                  <><span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Déverrouillage…</>
+                                ) : (
+                                  <><span>🪙</span> 1 crédit</>
+                                )}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 

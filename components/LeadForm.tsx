@@ -49,7 +49,7 @@ export default function LeadForm({ adresseComplete }: { adresseComplete: string 
 
   return (
     <form onSubmit={handleSubmit} className="mt-6 bg-white p-6 rounded-2xl shadow-lg border border-slate-100 animate-in fade-in zoom-in-95">
-      <h3 className="text-xl font-bold text-slate-800 mb-4">Dernière étape pour vos devis</h3>
+      <h3 className="text-xl font-bold text-slate-800 mb-4">Dernière étape pour vos devis DPE, amiante, plomb…</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {/* Type de Projet */}
