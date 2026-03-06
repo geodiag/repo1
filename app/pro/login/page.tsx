@@ -11,17 +11,51 @@ export default function ProLoginPage() {
   const [password, setPassword] = useState("");
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
+  const [errorType, setErrorType] = useState<"" | "unconfirmed" | "credentials" | "other">("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendDone,    setResendDone]    = useState(false);
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setErrorType("");
+    setResendDone(false);
+
     const { error } = await supabaseBrowser.auth.signInWithPassword({ email, password });
+
     if (error) {
-      setError("Email ou mot de passe incorrect.");
+      if (error.message === "Email not confirmed") {
+        setErrorType("unconfirmed");
+        setError("Votre email n'a pas encore été confirmé. Vérifiez votre boîte mail (y compris les spams).");
+      } else if (
+        error.message === "Invalid login credentials" ||
+        error.message === "invalid_credentials"
+      ) {
+        setErrorType("credentials");
+        setError("Email ou mot de passe incorrect. Vérifiez vos informations ou réinitialisez votre mot de passe.");
+      } else {
+        setErrorType("other");
+        setError("Une erreur est survenue. Réessayez dans quelques instants.");
+      }
       setLoading(false);
     } else {
       router.push("/pro/dashboard");
+    }
+  }
+
+  async function handleResendConfirmation() {
+    if (!email) {
+      setError("Saisissez votre email ci-dessus puis cliquez sur Renvoyer.");
+      return;
+    }
+    setResendLoading(true);
+    const { error } = await supabaseBrowser.auth.resend({ type: "signup", email });
+    setResendLoading(false);
+    if (!error) {
+      setResendDone(true);
+    } else {
+      setError("Impossible de renvoyer l'email. Réessayez dans quelques minutes.");
     }
   }
 
@@ -78,13 +112,18 @@ export default function ProLoginPage() {
                 type="email"
                 required
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={e => { setEmail(e.target.value); setResendDone(false); }}
                 placeholder="vous@cabinet.fr"
                 className="w-full border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-bleu-france focus:ring-1 focus:ring-bleu-france"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">Mot de passe</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">Mot de passe</label>
+                <Link href="/pro/forgot-password" className="text-[11px] text-bleu-france hover:underline font-semibold">
+                  Mot de passe oublié ?
+                </Link>
+              </div>
               <input
                 type="password"
                 required
@@ -95,8 +134,42 @@ export default function ProLoginPage() {
               />
             </div>
 
+            {/* Bloc erreur */}
             {error && (
-              <p className="text-xs text-red-600 font-bold bg-red-50 border border-red-200 px-3 py-2">{error}</p>
+              <div className={`text-xs font-bold px-3 py-3 border rounded-sm ${
+                errorType === "unconfirmed"
+                  ? "bg-amber-50 border-amber-300 text-amber-800"
+                  : "bg-red-50 border-red-200 text-red-700"
+              }`}>
+                <p>{error}</p>
+
+                {/* Email non confirmé → bouton renvoyer */}
+                {errorType === "unconfirmed" && (
+                  <div className="mt-2">
+                    {resendDone ? (
+                      <p className="text-green-700 font-bold">✅ Email renvoyé ! Vérifiez votre boîte (et les spams).</p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendConfirmation}
+                        disabled={resendLoading}
+                        className="mt-1 text-[11px] font-black underline text-amber-700 hover:text-amber-900 disabled:opacity-60"
+                      >
+                        {resendLoading ? "Envoi en cours…" : "→ Renvoyer l'email de confirmation"}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Mauvais mot de passe → lien reset */}
+                {errorType === "credentials" && (
+                  <p className="mt-1 text-[11px]">
+                    <Link href="/pro/forgot-password" className="underline font-black text-red-700 hover:text-red-900">
+                      → Réinitialiser mon mot de passe
+                    </Link>
+                  </p>
+                )}
+              </div>
             )}
 
             <button
