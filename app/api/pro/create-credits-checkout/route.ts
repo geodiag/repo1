@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 
 // Packs de crédits disponibles
 export const CREDIT_PACKS = [
-  { id: 'starter', label: 'Pack Starter',  credits: 5,  price: 2200, priceDisplay: '22 €',  perLead: '4,40 €/lead' },
-  { id: 'pro',     label: 'Pack Pro',      credits: 15, price: 6000, priceDisplay: '60 €',  perLead: '4,00 €/lead' },
-  { id: 'expert',  label: 'Pack Expert',   credits: 30, price: 10500, priceDisplay: '105 €', perLead: '3,50 €/lead' },
+  { id: 'decouverte', label: 'Découverte',   credits: 1,  price: 590,   priceDisplay: '5,90 €',  perLead: '5,90 €/lead' },
+  { id: 'starter',    label: 'Pack Starter', credits: 5,  price: 2200,  priceDisplay: '22 €',    perLead: '4,40 €/lead' },
+  { id: 'pro',        label: 'Pack Pro',     credits: 15, price: 6000,  priceDisplay: '60 €',    perLead: '4,00 €/lead' },
+  { id: 'expert',     label: 'Pack Expert',  credits: 30, price: 10500, priceDisplay: '105 €',   perLead: '3,50 €/lead' },
 ];
 
 export async function POST(request: Request) {

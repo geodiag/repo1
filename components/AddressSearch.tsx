@@ -67,8 +67,6 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
   const [isErpLoading, setIsErpLoading] = useState(false);
   const [erpData, setErpData] = useState<ErpData | null>(null);
   const [erpError, setErpError] = useState<string | null>(null);
-  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   // Scroll automatique vers les résultats dès qu'ils apparaissent
@@ -407,77 +405,56 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
             </div>
           )}
 
-          {/* CTA Téléchargement PDF officiel */}
-          <div className="border-t border-gray-200 p-6">
-            <div className="flex flex-col sm:flex-row items-center gap-6 bg-white border border-gray-200 p-5 shadow-sm">
-              {/* Icône + texte */}
+          {/* CTA — Étape suivante (sans affichage du prix) */}
+          <div className="border-t-2 border-bleu-france p-6 bg-white">
+            <div className="flex flex-col sm:flex-row items-center gap-5">
+
+              {/* Icône + texte descriptif */}
               <div className="flex gap-4 items-center flex-1">
                 <div className="shrink-0 w-12 h-12 bg-bleu-france flex items-center justify-center text-2xl text-white">
                   📄
                 </div>
                 <div>
-                  <p className="font-extrabold text-gray-900 text-sm mb-0.5">Rapport ERP + ENSA Officiel</p>
+                  <p className="font-extrabold text-gray-900 text-sm mb-0.5">
+                    Rapport ERP + ENSA Officiel prêt
+                  </p>
                   <p className="text-xs text-gray-500 leading-relaxed">
-                    Données officielles de l'État · Valable 6 mois · Valeur légale
+                    Données officielles de l'État · Valable 6 mois · Conforme notaire
                   </p>
                 </div>
               </div>
 
-              {/* Prix + bouton */}
-              <div className="flex items-center gap-4 shrink-0">
-                <div className="text-right">
-                  <p className="text-2xl font-black text-gray-900 leading-none">9,90 €</p>
-                  <p className="text-[10px] text-gray-400 uppercase font-bold">TTC</p>
-                </div>
-                <button
-                  disabled={isCheckoutLoading}
-                  onClick={async () => {
-                    if (!selectedAddress) return;
-                    setIsCheckoutLoading(true);
-                    setCheckoutError(null);
-                    const [lng, lat] = selectedAddress.geometry.coordinates;
-                    try {
-                      const res = await fetch('/api/create-checkout', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          lat: String(lat),
-                          lon: String(lng),
-                          insee: selectedAddress.properties.citycode,
-                          city: selectedAddress.properties.city || '',
-                          adresse: selectedAddress.properties.label,
-                        }),
-                      });
-                      if (!res.ok) throw new Error('Erreur serveur');
-                      const { url } = await res.json();
-                      if (url) {
-                        window.location.href = url;
-                      } else {
-                        throw new Error('URL de paiement manquante');
-                      }
-                    } catch {
-                      setCheckoutError("Impossible d'ouvrir la page de paiement. Réessayez.");
-                      setIsCheckoutLoading(false);
-                    }
-                  }}
-                  className="bg-bleu-france hover:bg-bleu-france-hover disabled:opacity-60 disabled:cursor-wait text-white font-bold py-3 px-7 text-sm transition-colors"
-                >
-                  {isCheckoutLoading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      Redirection…
-                    </span>
-                  ) : "Télécharger"}
-                </button>
-              </div>
+              {/* Bouton principal — pas de prix affiché */}
+              <button
+                onClick={() => {
+                  if (!selectedAddress || !erpData) return;
+                  // Sauvegarder les données en session pour les retrouver dans l'espace
+                  sessionStorage.setItem('geodiag_erp',     JSON.stringify(erpData));
+                  sessionStorage.setItem('geodiag_address', JSON.stringify(selectedAddress));
+                  // Construire la ref de la parcelle pour l'URL (ex: 33063000CW0162)
+                  const ref = (erpData.parcelleRef && erpData.parcelleRef !== '–')
+                    ? erpData.parcelleRef
+                    : selectedAddress.properties.id;
+                  const [lng, lat] = selectedAddress.geometry.coordinates;
+                  const params = new URLSearchParams({
+                    adresse: selectedAddress.properties.label,
+                    lat:     String(lat),
+                    lng:     String(lng),
+                    insee:   selectedAddress.properties.citycode,
+                    city:    selectedAddress.properties.city || '',
+                  });
+                  window.location.href = `/commande/${encodeURIComponent(ref)}?${params.toString()}`;
+                }}
+                className="shrink-0 bg-bleu-france hover:bg-bleu-france-hover text-white font-bold py-3 px-8 text-sm transition-colors flex items-center gap-2 shadow-dsfr"
+              >
+                Étape suivante
+                <span aria-hidden="true" className="text-base">→</span>
+              </button>
             </div>
 
-            {checkoutError && (
-              <p className="text-xs text-rouge-marianne mt-2 font-bold">⚠️ {checkoutError}</p>
-            )}
-            <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+            <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
               <span>🔒</span>
-              <span>Paiement sécurisé par Stripe — téléchargement instantané après validation</span>
+              <span>Démarche sécurisée · Document officiel conforme pour la vente ou la location</span>
             </p>
           </div>
 

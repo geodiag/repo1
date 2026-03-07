@@ -223,68 +223,79 @@ export default function ProDashboard() {
 
             {/* Cards packs */}
             <div className="bg-gradient-to-b from-slate-50 to-white p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {CREDIT_PACKS.map((pack) => {
-                  const isPro = pack.id === "pro";
+                  const isPro      = pack.id === "pro";
+                  const isDecouverte = pack.id === "decouverte";
                   return (
                     <div
                       key={pack.id}
-                      className={`relative flex flex-col rounded-xl border-2 p-5 transition-all ${
+                      className={`relative flex flex-col rounded-xl border-2 p-4 transition-all ${
                         isPro
-                          ? "border-bleu-france shadow-lg shadow-blue-100 bg-white scale-[1.02]"
+                          ? "border-bleu-france shadow-lg shadow-blue-100 bg-white"
+                          : isDecouverte
+                          ? "border-dashed border-gray-300 bg-gray-50 hover:border-gray-400 hover:shadow-sm"
                           : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-md"
                       }`}
                     >
-                      {/* Badge populaire */}
+                      {/* Badges */}
                       {isPro && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap">
                           <span className="bg-gradient-to-r from-bleu-france to-[#1a56db] text-white text-[10px] font-black uppercase px-3 py-1 rounded-full shadow">
-                            ⭐ Le plus populaire
+                            ⭐ Populaire
+                          </span>
+                        </div>
+                      )}
+                      {isDecouverte && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                          <span className="bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full">
+                            🧪 Essai
                           </span>
                         </div>
                       )}
 
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-4 ${isPro ? "bg-blue-100" : "bg-gray-100"}`}>
-                        <span className="text-xl">🪙</span>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 ${isPro ? "bg-blue-100" : "bg-gray-100"}`}>
+                        <span className="text-base">🪙</span>
                       </div>
 
-                      <p className={`text-xs font-black uppercase tracking-wider mb-1 ${isPro ? "text-bleu-france" : "text-gray-400"}`}>
+                      <p className={`text-[10px] font-black uppercase tracking-wider mb-1 ${isPro ? "text-bleu-france" : "text-gray-400"}`}>
                         {pack.label}
                       </p>
 
                       <div className="flex items-end gap-1 mb-1">
-                        <span className="text-5xl font-black text-gray-900 leading-none">{pack.credits}</span>
-                        <span className="text-gray-400 font-bold pb-1">crédits</span>
+                        <span className="text-4xl font-black text-gray-900 leading-none">{pack.credits}</span>
+                        <span className="text-gray-400 text-xs font-bold pb-1">cr.</span>
                       </div>
 
-                      <p className="text-2xl font-extrabold text-gray-900 mt-2">{pack.priceDisplay}</p>
+                      <p className="text-xl font-extrabold text-gray-900 mt-1">{pack.priceDisplay}</p>
 
-                      <div className="flex items-center gap-1.5 mt-2 mb-5">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${isPro ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                          {pack.perLead}
-                        </span>
-                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold mt-1 mb-3 self-start ${isPro ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                        {pack.perLead}
+                      </span>
 
-                      <div className="mt-auto space-y-2 text-xs text-gray-500 mb-5">
-                        <div className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Déverrouillage instantané</div>
-                        <div className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Crédits sans expiration</div>
-                        {isPro && <div className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Meilleur rapport qualité/prix</div>}
+                      <div className="mt-auto space-y-1.5 text-[10px] text-gray-500 mb-4">
+                        <div className="flex items-center gap-1"><span className="text-green-500">✓</span> Instantané</div>
+                        <div className="flex items-center gap-1"><span className="text-green-500">✓</span> Sans expiration</div>
+                        {isDecouverte && <div className="flex items-center gap-1"><span className="text-gray-400">·</span> <span className="text-gray-400 italic">Idéal pour tester</span></div>}
+                        {isPro && <div className="flex items-center gap-1"><span className="text-green-500">✓</span> Meilleur prix</div>}
                       </div>
 
                       <button
                         onClick={() => handleBuyPack(pack.id)}
                         disabled={buyingPack === pack.id}
                         style={isPro ? { background: "linear-gradient(90deg, #003189 0%, #1a56db 100%)" } : {}}
-                        className={`w-full font-bold py-3 text-sm rounded-lg transition-all disabled:opacity-60 ${
+                        className={`w-full font-bold py-2.5 text-xs rounded-lg transition-all disabled:opacity-60 ${
                           isPro
-                            ? "text-white hover:shadow-lg hover:shadow-blue-200 hover:scale-[1.01]"
+                            ? "text-white hover:shadow-lg hover:shadow-blue-200"
+                            : isDecouverte
+                            ? "bg-gray-700 text-white hover:bg-gray-600"
                             : "bg-gray-900 text-white hover:bg-gray-700"
                         }`}
                       >
                         {buyingPack === pack.id ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                            Redirection…
+                          <span className="flex items-center justify-center gap-1.5">
+                            <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                            …
                           </span>
                         ) : `Acheter — ${pack.priceDisplay}`}
                       </button>

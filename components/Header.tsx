@@ -8,7 +8,8 @@ export default function Header() {
 
   const navLinks = [
     { href: "/diagnostics", label: "Diagnostics (Vente/Location)" },
-    { href: "/erp",         label: "État des Risques (ERP)" },
+    { href: "/erp",         label: "ERP" },
+    { href: "/ensa",        label: "ENSA ✈️" },
     { href: "/pro",         label: "Espace Professionnel", cta: true },
   ];
 

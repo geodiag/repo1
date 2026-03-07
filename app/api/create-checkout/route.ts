@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { lat, lon, insee, city, adresse } = body;
+  const { lat, lon, insee, city, adresse, return_to } = body;
 
   if (!lat || !lon || !insee || !adresse) {
     return NextResponse.json({ error: 'Paramètres manquants.' }, { status: 400 });
@@ -17,6 +17,8 @@ export async function POST(request: Request) {
 
   // Paramètres PDF encodés dans success_url pour le récupérer après paiement
   const pdfParams = new URLSearchParams({ lat, lon, insee, city: city || '', adresse });
+  // Si return_to=espace, on redirige vers l'espace après paiement
+  if (return_to) pdfParams.set('return_to', return_to);
   const successUrl = `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}&${pdfParams.toString()}`;
   const cancelUrl  = `${appUrl}/?annule=1`;
 

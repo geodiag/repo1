@@ -7,11 +7,13 @@ import { Suspense } from "react";
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
-  const lat     = searchParams.get("lat");
-  const lon     = searchParams.get("lon");
-  const insee   = searchParams.get("insee");
-  const city    = searchParams.get("city");
-  const adresse = searchParams.get("adresse");
+  const lat      = searchParams.get("lat");
+  const lon      = searchParams.get("lon");
+  const insee    = searchParams.get("insee");
+  const city     = searchParams.get("city");
+  const adresse  = searchParams.get("adresse");
+  // Paramètre de retour : "espace" si l'achat provient de l'espace propriétaire
+  const returnTo = searchParams.get("return_to");
 
   const [status, setStatus] = useState<"verifying" | "downloading" | "done" | "error">("verifying");
   const [errorMsg, setErrorMsg] = useState("");
@@ -82,6 +84,9 @@ function SuccessContent() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
+        // Marquer le rapport comme téléchargé dans la session (pour l'espace propriétaire)
+        sessionStorage.setItem("geodiag_rapport_done", "1");
+
         setStatus("done");
 
       } catch (error) {
@@ -121,7 +126,7 @@ function SuccessContent() {
             <div className="text-5xl mb-6">📄</div>
             <h1 className="text-xl font-extrabold text-gray-900 mb-2">Paiement confirmé !</h1>
             <p className="text-sm text-gray-600 mb-4">
-              Génération de votre rapport ERP officiel en cours depuis les registres officiels de l'État…
+              Génération de votre rapport ERP + ENSA officiel en cours depuis les registres officiels de l'État…
             </p>
             <div className="w-10 h-10 border-4 border-gray-200 border-t-bleu-france rounded-full animate-spin mx-auto"></div>
           </>
@@ -135,7 +140,7 @@ function SuccessContent() {
             </div>
             <h1 className="text-2xl font-extrabold text-gray-900 mb-3">Votre ERP est téléchargé !</h1>
             <p className="text-sm text-gray-600 mb-2">
-              Votre rapport officiel a été généré depuis les bases de données publiques de l'État et enregistré sur votre appareil.
+              Votre rapport officiel (incluant la vérification ENSA) a été généré depuis les bases de données publiques de l'État et enregistré sur votre appareil.
             </p>
             {adresse && (
               <p className="text-xs font-mono bg-gray-100 border border-gray-200 px-3 py-2 mt-4 text-gray-700">
@@ -146,12 +151,23 @@ function SuccessContent() {
               <p className="font-bold text-bleu-france mb-1">📋 Rappel important</p>
               <p>Ce document est valable <strong>6 mois</strong>. Remettez-le à l'acquéreur ou au locataire avant la signature du compromis ou du bail.</p>
             </div>
-            <a
-              href="/"
-              className="inline-block mt-8 bg-bleu-france text-white font-bold py-3 px-8 hover:bg-bleu-france-hover transition-colors text-sm"
-            >
-              ← Retour à l'accueil
-            </a>
+            <div className="flex flex-col sm:flex-row gap-3 mt-8 justify-center">
+              {returnTo === "espace" ? (
+                <a
+                  href="/espace"
+                  className="inline-block bg-bleu-france text-white font-bold py-3 px-8 hover:bg-bleu-france-hover transition-colors text-sm"
+                >
+                  → Retour à mon espace propriétaire
+                </a>
+              ) : (
+                <a
+                  href="/"
+                  className="inline-block bg-bleu-france text-white font-bold py-3 px-8 hover:bg-bleu-france-hover transition-colors text-sm"
+                >
+                  ← Retour à l&apos;accueil
+                </a>
+              )}
+            </div>
           </>
         )}
 

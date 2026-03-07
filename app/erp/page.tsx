@@ -2,8 +2,8 @@ import Link from "next/link";
 import Header from "../../components/Header";
 
 export const metadata = {
-  title: "État des Risques et Pollutions (ERP) — Géodiag",
-  description: "Comprendre l'ERP : ce qu'il contient, pourquoi il est obligatoire, comment l'obtenir et ce qu'il signifie pour votre transaction immobilière.",
+  title: "ERP + ENSA : deux documents obligatoires — Géodiag",
+  description: "ERP (État des Risques et Pollutions) et ENSA (Nuisances Sonores Aériennes) : ce qu'ils contiennent, pourquoi ils sont obligatoires, comment les obtenir.",
 };
 
 const erpRisques = [
@@ -59,7 +59,11 @@ const etapes = [
 const faqErp = [
   {
     q: "L'ERP Géodiag a-t-il la même valeur légale qu'un ERP classique ?",
-    a: "Oui. Notre plateforme s'appuie sur les données officielles de l'État, issues du registre national des risques prévu par la réglementation. Le document produit est identique à celui que fournirait un diagnostiqueur ou la mairie, et est conforme aux exigences du Code de l'environnement (art. L125-5). Il existe par ailleurs un site gouvernemental recensant ces informations, mais notre service vous simplifie la démarche et vous délivre un document mis en forme, prêt à remettre.",
+    a: "Oui. Notre plateforme s'appuie sur les données officielles de l'État, issues du registre national des risques prévu par la réglementation. Le document produit est conforme aux exigences du Code de l'environnement (art. L125-5). Notre service simplifie la démarche et vous délivre un document mis en forme, prêt à remettre à l'acquéreur ou au locataire.",
+  },
+  {
+    q: "L'ENSA est-elle incluse dans l'ERP Géodiag ?",
+    a: "Oui. Géodiag vérifie automatiquement si votre bien est concerné par un Plan d'Exposition au Bruit (PEB) lors de l'analyse initiale. Cette vérification ENSA est incluse dans le tarif unique de 9,90 €. Si votre bien est en zone PEB, les informations correspondantes figurent dans votre rapport. Si votre bien est hors zone, cela est également attesté.",
   },
   {
     q: "Mon bien n'est dans aucune zone à risque — ai-je quand même besoin d'un ERP ?",
@@ -106,10 +110,10 @@ export default function ErpPage() {
               Document obligatoire
             </span>
             <h1 className="text-4xl font-extrabold text-gray-900 mb-4 leading-tight">
-              L'État des Risques et Pollutions (ERP) :<br />le guide complet
+              ERP + ENSA : les deux documents<br />obligatoires pour votre transaction
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl leading-relaxed">
-              Obligatoire pour toute vente ou location, l'ERP informe l'acquéreur ou le locataire sur les risques naturels, technologiques et environnementaux liés au bien immobilier. Voici tout ce qu'il faut savoir.
+              L'ERP (État des Risques et Pollutions) et l'ENSA (État des Nuisances Sonores Aériennes) sont tous deux obligatoires pour toute vente ou location. Géodiag les vérifie ensemble en une seule démarche à 9,90 €.
             </p>
           </div>
         </section>
@@ -118,8 +122,8 @@ export default function ErpPage() {
         <section className="py-14">
           <div className="max-w-5xl mx-auto px-4">
             <div className="mb-8">
-              <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Ce que contient l'ERP</h2>
-              <p className="text-sm text-gray-500">Le rapport analyse 4 familles de risques à partir des bases de données de l'État.</p>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Ce que contient votre rapport ERP</h2>
+              <p className="text-sm text-gray-500">Le rapport analyse 4 familles de risques à partir des bases de données officielles de l'État.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {erpRisques.map((r) => (
@@ -138,6 +142,52 @@ export default function ErpPage() {
                   </ul>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ENSA */}
+        <section className="bg-sky-50 border-t border-b border-sky-200 py-12">
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="flex flex-col md:flex-row gap-8 items-start">
+              <div className="flex-1">
+                <span className="inline-block bg-sky-200 text-sky-800 font-bold px-3 py-1 text-xs uppercase tracking-widest mb-3">Nouveau — Décret 2022</span>
+                <h2 className="text-2xl font-extrabold text-gray-900 mb-3">L'ENSA : État des Nuisances Sonores Aériennes</h2>
+                <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                  Instauré par le Décret n° 2022-789 du 25 mai 2022, l'ENSA est obligatoire pour tout bien situé dans un <strong>Plan d'Exposition au Bruit (PEB)</strong> d'un aérodrome. Il complète l'ERP et doit être remis à l'acquéreur ou au locataire avant la signature.
+                </p>
+                <div className="space-y-2 text-sm text-gray-700">
+                  <div className="flex gap-3">
+                    <span className="shrink-0 font-black text-sky-600">›</span>
+                    <p><strong>Zones A, B, C, D</strong> — niveaux d'exposition au bruit aérien du moins au plus élevé, définis par arrêté préfectoral autour de chaque aérodrome.</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="shrink-0 font-black text-sky-600">›</span>
+                    <p><strong>Biens non concernés</strong> — si votre bien est hors zone PEB, l'ENSA mentionne simplement l'absence d'exposition. Le document reste requis dans les communes incluses dans le périmètre du PEB.</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="shrink-0 font-black text-sky-600">›</span>
+                    <p><strong>Vérification automatique</strong> — Géodiag interroge la base nationale des PEB et vous indique instantanément si votre bien est concerné.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="md:w-72 shrink-0 bg-white border border-sky-200 p-5 shadow-sm">
+                <p className="text-xs font-black uppercase text-sky-700 mb-3">✈️ PEB — Zones d'exposition</p>
+                <div className="space-y-2">
+                  {[
+                    { zone: "Zone A", label: "Gêne très forte", color: "bg-red-100 text-red-800 border-red-300" },
+                    { zone: "Zone B", label: "Gêne forte", color: "bg-orange-100 text-orange-800 border-orange-300" },
+                    { zone: "Zone C", label: "Gêne modérée", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
+                    { zone: "Zone D", label: "Gêne faible", color: "bg-green-100 text-green-800 border-green-300" },
+                  ].map((z) => (
+                    <div key={z.zone} className={`border px-3 py-2 text-xs flex justify-between items-center ${z.color}`}>
+                      <span className="font-black">{z.zone}</span>
+                      <span className="font-medium">{z.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-3">Décret n° 2002-626 · Arrêtés préfectoraux PEB</p>
+              </div>
             </div>
           </div>
         </section>
@@ -162,7 +212,7 @@ export default function ErpPage() {
         {/* Comment l'obtenir */}
         <section className="py-14">
           <div className="max-w-5xl mx-auto px-4">
-            <h2 className="text-2xl font-extrabold text-gray-900 mb-8">Comment obtenir votre ERP avec Géodiag</h2>
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-8">Comment obtenir votre ERP + ENSA avec Géodiag</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {etapes.map((e) => (
                 <div key={e.num} className="bg-white border border-gray-200 p-5 relative">
@@ -178,9 +228,9 @@ export default function ErpPage() {
                 href="/"
                 className="inline-block bg-bleu-france text-white font-extrabold py-3 px-10 hover:bg-bleu-france-hover transition text-sm"
               >
-                Obtenir mon ERP — 9,90 € →
+                Obtenir mon ERP + ENSA — 9,90 € →
               </Link>
-              <p className="text-xs text-gray-400 mt-2">🔒 Paiement sécurisé · Téléchargement instantané · Valable 6 mois</p>
+              <p className="text-xs text-gray-400 mt-2">🔒 Paiement sécurisé · ERP + vérification ENSA incluse · Valable 6 mois</p>
             </div>
           </div>
         </section>
@@ -213,7 +263,7 @@ export default function ErpPage() {
               <div className="md:w-72 shrink-0 bg-blue-50 border border-blue-200 p-5">
                 <p className="text-xs font-black uppercase text-bleu-france mb-3">Bon à savoir</p>
                 <p className="text-sm text-gray-700 leading-relaxed">
-                  L'ERP est le seul diagnostic du DDT que vous pouvez réaliser <strong>vous-même ou en ligne</strong>. Les autres diagnostics (DPE, amiante…) nécessitent un professionnel certifié. C'est ce qui rend notre service particulièrement utile : <strong>9,90 € et 2 minutes</strong> suffisent pour être en conformité.
+                  L'ERP et l'ENSA sont les seuls diagnostics du DDT que vous pouvez réaliser <strong>vous-même ou en ligne</strong>. Les autres diagnostics (DPE, amiante…) nécessitent un professionnel certifié. C'est ce qui rend notre service particulièrement utile : <strong>9,90 € et 2 minutes</strong> suffisent pour obtenir ERP + ENSA en conformité.
                 </p>
               </div>
             </div>
@@ -223,7 +273,7 @@ export default function ErpPage() {
         {/* FAQ */}
         <section className="py-14">
           <div className="max-w-5xl mx-auto px-4">
-            <h2 className="text-2xl font-extrabold text-gray-900 mb-8">Questions fréquentes sur l'ERP</h2>
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-8">Questions fréquentes sur l'ERP et l'ENSA</h2>
             <div className="space-y-4">
               {faqErp.map((item, i) => (
                 <div key={i} className="bg-white border border-gray-200 p-5">
@@ -238,15 +288,15 @@ export default function ErpPage() {
         {/* CTA final */}
         <section className="bg-bleu-france py-12">
           <div className="max-w-3xl mx-auto px-4 text-center text-white">
-            <h2 className="text-2xl font-extrabold mb-3">Prêt à obtenir votre ERP ?</h2>
+            <h2 className="text-2xl font-extrabold mb-3">Prêt à obtenir votre ERP + ENSA ?</h2>
             <p className="text-blue-100 mb-6 text-sm">
-              Saisissez votre adresse, vérifiez les risques en temps réel, payez 9,90 € et téléchargez votre rapport officiel certifié Géorisques.
+              Saisissez votre adresse, vérifiez risques et exposition au bruit en temps réel, payez 9,90 € et téléchargez votre rapport officiel complet.
             </p>
             <Link
               href="/"
               className="inline-block bg-white text-bleu-france font-extrabold py-3 px-8 hover:bg-gray-50 transition text-sm"
             >
-              Générer mon ERP maintenant →
+              Générer mon ERP + ENSA maintenant →
             </Link>
           </div>
         </section>

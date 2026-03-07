@@ -3,10 +3,10 @@ export default function ReassuranceBlock() {
     <div className="bg-white p-6 md:p-8 shadow-sm border border-gray-200 flex flex-col gap-5 border-t-4 border-t-bleu-france">
       <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
         <span className="text-xl" aria-hidden="true">🏛️</span>
-        L'ERP : Un document administratif complexe
+        ERP + ENSA : deux obligations en une démarche
       </h3>
       <p className="text-sm text-gray-700 leading-relaxed">
-        Les propriétaires vendeurs ou bailleurs sont tenus de fournir un État des Risques. Notre plateforme simplifie cette démarche fastidieuse en compilant instantanément les données officielles pour éviter toute erreur juridique.
+        Les propriétaires vendeurs ou bailleurs sont tenus de fournir un ERP et, si applicable, une ENSA. Notre plateforme simplifie ces deux démarches en compilant instantanément les données officielles pour éviter toute erreur juridique.
       </p>
       <div className="flex flex-col gap-4 mt-2">
         <div className="flex items-start gap-3">
@@ -31,6 +31,7 @@ export default function ReassuranceBlock() {
         <span className="text-gray-800 flex items-center gap-1"><span className="text-green-600">●</span> DVF</span>
         <span className="text-gray-800 flex items-center gap-1"><span className="text-green-600">●</span> PLU</span>
         <span className="text-gray-800 flex items-center gap-1"><span className="text-green-600">●</span> ADEME</span>
+        <span className="text-gray-800 flex items-center gap-1"><span className="text-green-600">●</span> PEB/ENSA</span>
       </div>
     </div>
   );

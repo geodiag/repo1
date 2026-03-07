@@ -35,9 +35,28 @@ export default function ProSignupPage() {
     });
 
     if (signupError) {
-      setError(signupError.message === "User already registered"
-        ? "Un compte existe déjà avec cet email."
-        : "Erreur lors de la création du compte.");
+      console.error("Supabase signUp error:", signupError.message, signupError);
+      const msg = signupError.message;
+      if (msg === "User already registered" || msg.includes("already registered")) {
+        setError("Un compte existe déjà avec cet email. Connectez-vous ou réinitialisez votre mot de passe.");
+      } else if (msg.includes("rate limit") || msg.includes("email rate")) {
+        setError("Trop de tentatives. Attendez quelques minutes avant de réessayer.");
+      } else if (msg.includes("invalid") && msg.includes("email")) {
+        setError("Adresse email invalide. Vérifiez le format.");
+      } else if (msg.includes("Password") || msg.includes("password")) {
+        setError("Mot de passe refusé : utilisez au moins 8 caractères avec des lettres et chiffres.");
+      } else if (msg.includes("Signups not allowed")) {
+        setError("Les inscriptions sont temporairement désactivées. Réessayez dans quelques instants.");
+      } else {
+        setError(`Erreur d'inscription : ${msg}`);
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Cas particulier : Supabase renvoie data.user null si l'email existe déjà (non confirmé)
+    if (!data.user && !signupError) {
+      setError("Un compte existe déjà avec cet email mais n'a pas encore été confirmé. Connectez-vous pour renvoyer l'email de confirmation.");
       setLoading(false);
       return;
     }
@@ -74,52 +93,19 @@ export default function ProSignupPage() {
       <div className="min-h-screen bg-fond-gris flex flex-col">
         <div className="liseret-tricolore w-full fixed top-0 z-50"></div>
         <div className="flex-grow flex items-center justify-center px-4 py-16">
-          <div className="bg-white border border-gray-200 shadow-dsfr p-8 w-full max-w-md">
-
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">✅</span>
-              </div>
-              <h2 className="text-xl font-extrabold text-gray-900 mb-2">Compte créé avec succès !</h2>
-              <p className="text-sm text-gray-500">
-                Un email de confirmation a été envoyé à <strong className="text-gray-800">{email}</strong>
-              </p>
+          <div className="bg-white border border-gray-200 shadow-dsfr p-8 w-full max-w-md text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">✅</span>
             </div>
-
-            {/* Étapes */}
-            <div className="space-y-3 mb-6">
-              <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                <span className="shrink-0 w-6 h-6 rounded-full bg-bleu-france text-white text-xs font-black flex items-center justify-center mt-0.5">1</span>
-                <div>
-                  <p className="text-sm font-bold text-gray-800">Ouvrez votre boîte mail</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Cherchez un email de confirmation de Géodiag. <strong>Vérifiez aussi vos spams</strong> si vous ne le voyez pas dans les 2 minutes.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-100 rounded-lg">
-                <span className="shrink-0 w-6 h-6 rounded-full bg-gray-300 text-white text-xs font-black flex items-center justify-center mt-0.5">2</span>
-                <div>
-                  <p className="text-sm font-bold text-gray-800">Cliquez sur le lien de confirmation</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Ce lien active votre compte. Sans cette étape, la connexion sera refusée.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-100 rounded-lg">
-                <span className="shrink-0 w-6 h-6 rounded-full bg-gray-300 text-white text-xs font-black flex items-center justify-center mt-0.5">3</span>
-                <div>
-                  <p className="text-sm font-bold text-gray-800">Connectez-vous à votre espace pro</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Accédez à vos leads qualifiés et rechargez des crédits.</p>
-                </div>
-              </div>
-            </div>
-
+            <h2 className="text-xl font-extrabold text-gray-900 mb-2">Compte créé !</h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Votre espace pro est prêt. Connectez-vous dès maintenant avec <strong>{email}</strong>.
+            </p>
             <Link href="/pro/login" className="block w-full text-center bg-bleu-france text-white font-bold py-3 px-8 text-sm hover:bg-bleu-france-hover transition">
-              Aller à la connexion →
+              Se connecter →
             </Link>
-
             <p className="text-center text-xs text-gray-400 mt-4">
-              Vous n'avez pas reçu l'email ?{" "}
-              <Link href="/pro/login" className="text-bleu-france font-bold hover:underline">
-                Renvoyer depuis la page de connexion
-              </Link>
+              <Link href="/" className="hover:underline">← Retour au site</Link>
             </p>
           </div>
         </div>
