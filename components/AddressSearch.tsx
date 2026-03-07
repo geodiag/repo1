@@ -36,6 +36,10 @@ interface ErpData {
   // Cadastre
   parcelleSurface: string;
   parcelleRef: string;
+  parcelleSection: string;
+  parcelleNumero: string;
+  parcelleCommune: string;
+  parcelleGeoJSON: object | null;
   // PLU
   zonePLU: string;
   codeZonePLU: string;
@@ -43,14 +47,19 @@ interface ErpData {
   // DVF
   transactionsRecentes: DvfTransaction[];
   prixMoyen: string;
+  // ENSA
+  ensaConcerne: boolean;
+  ensaAerodromes: { nom: string; codePEB: string }[];
 }
 
 interface AddressSearchProps {
   onResultsChange?: (hasResults: boolean) => void;
   onAddressSelect?: (coords: { lat: number; lng: number; label: string } | null) => void;
+  /** Remonte la géométrie GeoJSON + la référence cadastrale vers le parent (HeroSection) */
+  onParcelData?: (data: { geoJSON: object | null; ref: string } | null) => void;
 }
 
-export default function AddressSearch({ onResultsChange, onAddressSelect }: AddressSearchProps) {
+export default function AddressSearch({ onResultsChange, onAddressSelect, onParcelData }: AddressSearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AddressFeature[]>([]);
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
@@ -111,6 +120,11 @@ export default function AddressSearch({ onResultsChange, onAddressSelect }: Addr
       if (data.success) {
         setErpData(data.risques);
         onResultsChange?.(true);
+        // Remonte la géométrie cadastrale vers HeroSection pour la carte gauche
+        onParcelData?.({
+          geoJSON: data.risques.parcelleGeoJSON ?? null,
+          ref    : data.risques.parcelleRef ?? "–",
+        });
       }
     } catch (err) {
       setErpError("Service indisponible. Veuillez réessayer.");
@@ -136,6 +150,7 @@ export default function AddressSearch({ onResultsChange, onAddressSelect }: Addr
               setErpData(null);
               onResultsChange?.(false);
               onAddressSelect?.(null);
+              onParcelData?.(null);
             }}
           />
         </div>
@@ -168,7 +183,7 @@ export default function AddressSearch({ onResultsChange, onAddressSelect }: Addr
         <div className="mt-6 p-8 bg-white border border-gray-300 shadow-dsfr flex flex-col items-center justify-center space-y-4">
           <div className="w-12 h-12 border-4 border-gray-200 border-t-bleu-france rounded-full animate-spin"></div>
           <p className="font-bold text-gray-900">Interrogation des bases de l'État en cours...</p>
-          <p className="text-xs text-gray-500">Géorisques · Cadastre · PLU · DVF · ADEME</p>
+          <p className="text-xs text-gray-500">Géorisques · ENSA/PEB · Cadastre · PLU · DVF · ADEME</p>
         </div>
       )}
 
@@ -176,31 +191,82 @@ export default function AddressSearch({ onResultsChange, onAddressSelect }: Addr
       {erpData && (
         <div ref={resultsRef} className="mt-6 bg-white border border-gray-300 shadow-dsfr overflow-hidden">
 
-          {/* En-tête dossier */}
-          <div className="bg-fond-gris border-b border-gray-300 p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-1">Dossier pré-analysé — 7 bases interrogées</p>
-              <h3 className="text-xl font-extrabold text-bleu-france leading-tight mb-2">{selectedAddress?.properties.label}</h3>
-              <div className="flex flex-wrap gap-2">
-                {erpData.zonePLU !== "Non déterminée" && (
-                  <div className="inline-flex items-center gap-1 bg-white border border-gray-300 px-3 py-1 text-xs font-bold text-gray-700 shadow-sm">
-                    <span>🗺️</span>
-                    <span>Zone PLU : <span className="text-bleu-france">{erpData.zonePLU}</span></span>
-                  </div>
-                )}
+          {/* ── En-tête dossier ─────────────────────────────────────────── */}
+          <div className="bg-fond-gris border-b border-gray-300 p-5">
+            <p className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-1">
+              Dossier pré-analysé — 8 bases interrogées
+            </p>
+            <h3 className="text-xl font-extrabold text-bleu-france leading-tight mb-3">
+              {selectedAddress?.properties.label}
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {erpData.zonePLU !== "Non déterminée" && (
+                <div className="inline-flex items-center gap-1 bg-white border border-gray-300 px-3 py-1 text-xs font-bold text-gray-700 shadow-sm">
+                  <span>🗺️</span>
+                  <span>Zone PLU : <span className="text-bleu-france">{erpData.zonePLU}</span></span>
+                </div>
+              )}
+              <div className="inline-flex items-center gap-1 bg-white border border-gray-300 px-3 py-1 text-xs font-bold text-gray-700 shadow-sm">
+                <span>📐</span>
+                <span>{erpData.parcelleSurface}</span>
               </div>
-            </div>
-            <div className="hidden sm:block text-right shrink-0">
-              <p className="text-[10px] uppercase text-gray-500 font-bold">Réf. Parcelle</p>
-              <p className="text-xs font-mono bg-gray-200 px-2 py-1 mb-2">
-                {erpData.parcelleRef !== "–" ? erpData.parcelleRef : selectedAddress?.properties.id.split('_')[0]}
-              </p>
-              <p className="text-[10px] uppercase text-gray-500 font-bold">Réf. Dossier</p>
-              <p className="text-xs font-mono bg-gray-200 px-2 py-1">{selectedAddress?.properties.id.split('_')[0]}-ERP</p>
             </div>
           </div>
 
-          {/* Grille principale : Risques + Sources */}
+          {/* ── Badge cadastral officiel ───────────────────────────────────── */}
+          {(erpData.parcelleSection !== "–" || erpData.parcelleNumero !== "–") && (
+            <div className="px-5 py-4 border-b border-gray-200 bg-white">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-blue-50 border border-bleu-france/30">
+                {/* Icône officielle */}
+                <div className="shrink-0 w-10 h-10 bg-bleu-france flex items-center justify-center text-white text-lg">
+                  🏛️
+                </div>
+                {/* Références */}
+                <div className="flex-1">
+                  <p className="text-[10px] uppercase font-black text-gray-500 tracking-widest mb-1">
+                    Parcelle cadastrale identifiée — IGN
+                  </p>
+                  <div className="flex flex-wrap gap-3 items-center">
+                    <div className="text-center">
+                      <p className="text-[9px] uppercase text-gray-400 font-bold">Section</p>
+                      <p className="text-xl font-black text-bleu-france font-mono leading-none">
+                        {erpData.parcelleSection}
+                      </p>
+                    </div>
+                    <div className="text-gray-300 text-xl font-thin">|</div>
+                    <div className="text-center">
+                      <p className="text-[9px] uppercase text-gray-400 font-bold">Numéro</p>
+                      <p className="text-xl font-black text-bleu-france font-mono leading-none">
+                        {erpData.parcelleNumero}
+                      </p>
+                    </div>
+                    {erpData.parcelleSurface !== "Non disponible" && (
+                      <>
+                        <div className="text-gray-300 text-xl font-thin">|</div>
+                        <div className="text-center">
+                          <p className="text-[9px] uppercase text-gray-400 font-bold">Superficie</p>
+                          <p className="text-sm font-black text-gray-800 font-mono leading-none">
+                            {erpData.parcelleSurface}
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {/* Réf complète */}
+                <div className="shrink-0 text-right hidden sm:block">
+                  <p className="text-[9px] uppercase text-gray-400 font-bold mb-1">Réf. complète</p>
+                  <p className="text-xs font-mono bg-white border border-gray-300 px-2 py-1 text-gray-700">
+                    {erpData.parcelleRef !== "–"
+                      ? erpData.parcelleRef
+                      : selectedAddress?.properties.id.split("_")[0]}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Grille : Risques + Sources ────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-5 border-b border-gray-200">
             <div className="lg:col-span-2 p-5 border-b lg:border-b-0 lg:border-r border-gray-200 space-y-3">
               <h4 className="text-xs font-black uppercase text-gray-900 pb-2 border-b border-gray-200">Risques naturels & technologiques</h4>
@@ -241,6 +307,12 @@ export default function AddressSearch({ onResultsChange, onAddressSelect }: Addr
                   <span className="text-green-600">✅</span>
                   <span>Cadastre IGN · PLU (GPU) · DVF</span>
                 </li>
+                <li className="flex items-center gap-2">
+                  <span className={erpData.ensaConcerne ? "text-orange-500" : "text-green-600"}>
+                    {erpData.ensaConcerne ? "⚠️" : "✅"}
+                  </span>
+                  <span>ENSA — Plan d'Exposition au Bruit (PEB) : <strong>{erpData.ensaConcerne ? "Concerné" : "Hors zone"}</strong></span>
+                </li>
               </ul>
             </div>
           </div>
@@ -260,6 +332,35 @@ export default function AddressSearch({ onResultsChange, onAddressSelect }: Addr
               </div>
             </div>
           )}
+
+          {/* Bloc ENSA – Nuisances Sonores Aériennes */}
+          <div className="p-5 border-b border-gray-200 bg-sky-50">
+            <div className="flex items-center gap-2 mb-3">
+              <h4 className="text-xs font-black uppercase text-gray-900">✈️ ENSA — Nuisances Sonores Aériennes</h4>
+              <span className="text-[10px] bg-sky-200 text-sky-800 font-bold px-2 py-0.5 uppercase tracking-wide">Décret 2022</span>
+            </div>
+            {erpData.ensaConcerne ? (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-bold text-orange-700 bg-orange-50 border border-orange-300 px-2 py-1">⚠️ Bien soumis au PEB</span>
+                </div>
+                <p className="text-xs text-gray-600 mb-2">Ce bien est situé dans un Plan d'Exposition au Bruit (PEB). L'ENSA est obligatoire lors de toute vente ou location.</p>
+                <div className="flex flex-wrap gap-2">
+                  {erpData.ensaAerodromes.map((a, i) => (
+                    <div key={i} className="bg-white border border-orange-200 px-3 py-1.5 text-xs">
+                      <span className="font-bold text-gray-900">{a.nom}</span>
+                      {a.codePEB !== "–" && <span className="ml-2 font-black text-orange-700">Zone {a.codePEB}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-green-700 bg-green-50 border border-green-300 px-2 py-1">✅ Hors zone PEB</span>
+                <p className="text-xs text-gray-500">Aucun aérodrome avec PEB dans un rayon de 30 km.</p>
+              </div>
+            )}
+          </div>
 
           {/* Bloc DVF transactions */}
           {erpData.transactionsRecentes.length > 0 && (
@@ -315,7 +416,7 @@ export default function AddressSearch({ onResultsChange, onAddressSelect }: Addr
                   📄
                 </div>
                 <div>
-                  <p className="font-extrabold text-gray-900 text-sm mb-0.5">Rapport ERP Officiel</p>
+                  <p className="font-extrabold text-gray-900 text-sm mb-0.5">Rapport ERP + ENSA Officiel</p>
                   <p className="text-xs text-gray-500 leading-relaxed">
                     Données officielles de l'État · Valable 6 mois · Valeur légale
                   </p>

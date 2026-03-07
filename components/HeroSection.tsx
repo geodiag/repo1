@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import AddressSearch from "./AddressSearch";
 import ReassuranceBlock from "./ReassuranceBlock";
+
+// MapExplorer est client-only — on l'exclut du SSR
+const MapExplorer = dynamic(() => import("./MapExplorer"), { ssr: false });
 
 interface MapCoords {
   lat: number;
@@ -11,89 +15,93 @@ interface MapCoords {
 }
 
 export default function HeroSection() {
-  const [hasResults, setHasResults] = useState(false);
-  const [mapCoords, setMapCoords] = useState<MapCoords | null>(null);
-
-  // Construit l'URL OpenStreetMap embed avec marqueur centré sur l'adresse
-  const mapSrc = mapCoords
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${mapCoords.lng - 0.004},${mapCoords.lat - 0.003},${mapCoords.lng + 0.004},${mapCoords.lat + 0.003}&layer=mapnik&marker=${mapCoords.lat},${mapCoords.lng}`
-    : null;
+  const [mapCoords, setMapCoords]   = useState<MapCoords | null>(null);
+  // La géométrie GeoJSON + référence cadastrale, remontées par AddressSearch via callback
+  const [parcelData, setParcelData] = useState<{
+    geoJSON: object | null;
+    ref: string;
+  } | null>(null);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16 items-start">
+    /**
+     * Layout split-panel inspiré de france-erp.com :
+     *   mobile  → colonne unique (carte cachée)
+     *   lg+     → grille 42 % / 58 % — gauche défilante, droite sticky
+     */
+    <div className="flex flex-col lg:grid lg:grid-cols-[42%_58%] lg:items-stretch">
 
-      {/* Colonne Gauche */}
-      <div className="flex flex-col gap-8">
+      {/* ══════════════════════════════════════════════════════════════════
+          COLONNE GAUCHE — texte + recherche + résultats (défilable)
+      ══════════════════════════════════════════════════════════════════ */}
+      <div className="flex flex-col gap-8 overflow-y-auto px-6 py-10 md:px-10 md:py-14 bg-fond-gris">
+
+        {/* ── Hero texte ─────────────────────────────────────────────── */}
         <div>
           <span className="inline-block bg-green-100 text-green-800 font-bold px-3 py-1 text-sm mb-4 border border-green-300">
-            Données Géorisques & Cadastre
+            ERP + ENSA inclus — 9,90 €
           </span>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 leading-tight">
             Connaître les risques et obligations de votre bien.
           </h1>
-          <p className="text-lg text-gray-700">
-            Obtenez immédiatement votre État des Risques (ERP) conforme et chiffrez vos diagnostics obligatoires (DPE, Amiante) auprès de professionnels certifiés.
+          <p className="text-base text-gray-600 leading-relaxed">
+            Obtenez immédiatement votre ERP (État des Risques) et votre
+            vérification ENSA (Nuisances Sonores Aériennes) en une seule
+            démarche. La parcelle cadastrale est identifiée en temps réel sur
+            la carte.
           </p>
         </div>
 
-        {/* Carte */}
-        <div className="aspect-video md:aspect-square border-4 border-white shadow-dsfr relative overflow-hidden shrink-0 bg-gray-100">
-          {mapSrc ? (
-            <>
-              <iframe
-                src={mapSrc}
-                title={`Carte — ${mapCoords?.label}`}
-                className="w-full h-full border-0"
-                loading="lazy"
-              />
-              <div className="absolute bottom-0 left-0 right-0 bg-white/90 border-t border-gray-200 px-3 py-1.5 pointer-events-none">
-                <p className="text-[10px] font-bold text-gray-700 truncate">📍 {mapCoords?.label}</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <img src="/carte.png" alt="Aperçu cartographique" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                <span className="bg-white px-4 py-2 text-sm font-bold text-gray-700 shadow-md border border-gray-300">
-                  Aperçu cartographique
-                </span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Bloc de rassurance — visible à gauche uniquement quand résultats affichés */}
-        {hasResults && (
-          <div className="transition-all duration-300">
-            <ReassuranceBlock />
+        {/* ── Formulaire de recherche ─────────────────────────────────── */}
+        <div className="bg-white shadow-dsfr border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+              <span className="text-bleu-france">🔍</span>
+              Rechercher un dossier immobilier
+            </h2>
           </div>
-        )}
-      </div>
-
-      {/* Colonne Droite */}
-      <div className="flex flex-col gap-6 w-full z-10">
-
-        {/* Zone de Saisie */}
-        <div className="bg-white p-6 md:p-8 shadow-dsfr border border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-6 border-b border-gray-200 pb-4">
-            Rechercher un dossier immobilier
-          </h2>
-          <div className="relative z-20">
+          <div className="px-6 py-5">
             <AddressSearch
-              onResultsChange={setHasResults}
+              onResultsChange={() => undefined}
               onAddressSelect={setMapCoords}
+              onParcelData={setParcelData}
             />
           </div>
         </div>
 
-        {/* Bloc de rassurance — visible à droite par défaut, disparaît quand résultats */}
-        {!hasResults && (
-          <div className="transition-all duration-300">
-            <ReassuranceBlock />
+        {/* ── Carte mobile (lg:hidden) — visible sur mobile uniquement ── */}
+        {mapCoords && (
+          <div className="lg:hidden aspect-video border-2 border-white shadow-dsfr overflow-hidden">
+            <MapExplorer
+              lat={mapCoords.lat}
+              lng={mapCoords.lng}
+              parcelGeometry={parcelData?.geoJSON}
+              parcelRef={parcelData?.ref}
+              height="100%"
+            />
           </div>
         )}
 
+        {/* ── Bloc Réassurance ─────────────────────────────────────────── */}
+        <div>
+          <ReassuranceBlock />
+        </div>
+
       </div>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          COLONNE DROITE — MapExplorer sticky (desktop uniquement)
+          sticky top-0 + h-screen → reste ancré pendant que la gauche défile
+      ══════════════════════════════════════════════════════════════════ */}
+      <div className="hidden lg:block sticky top-0 h-screen">
+        <MapExplorer
+          lat={mapCoords?.lat}
+          lng={mapCoords?.lng}
+          parcelGeometry={parcelData?.geoJSON}
+          parcelRef={parcelData?.ref}
+          height="100%"
+        />
+      </div>
+
     </div>
   );
 }

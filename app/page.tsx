@@ -9,8 +9,8 @@ export default function Home() {
 
       <Header />
 
-      {/* Main Content */}
-      <main className="flex-grow max-w-7xl mx-auto px-4 py-12 md:py-16 w-full">
+      {/* Main Content — full width pour le split-panel Hero */}
+      <main className="flex-grow w-full">
         <HeroSection />
       </main>
 
@@ -23,7 +23,7 @@ export default function Home() {
               Ce que vous devez savoir
             </span>
             <h2 className="text-3xl font-extrabold text-gray-900">
-              L'ERP, les vraies questions que vous vous posez
+              ERP + ENSA : les vraies questions que vous vous posez
             </h2>
           </div>
 
@@ -71,13 +71,13 @@ export default function Home() {
             {/* Q4 */}
             <div className="border border-gray-200 p-6 hover:border-bleu-france hover:shadow-sm transition-all">
               <div className="flex items-start gap-3 mb-3">
-                <span className="text-2xl mt-0.5">🗺️</span>
+                <span className="text-2xl mt-0.5">✈️</span>
                 <h3 className="font-bold text-gray-900 text-base leading-snug">
-                  Quels risques sont réellement analysés ?
+                  C'est quoi l'ENSA et pourquoi c'est nouveau ?
                 </h3>
               </div>
               <p className="text-sm text-gray-600 leading-relaxed">
-                L'ERP couvre les <strong>risques naturels</strong> (inondations, séismes, mouvements de terrain, avalanches), les <strong>risques technologiques</strong> (sites industriels, canalisations de gaz), le <strong>potentiel radon</strong>, la <strong>pollution des sols</strong> (BASIAS/SIS) et l'historique des catastrophes naturelles reconnues (CATNAT).
+                L'ENSA (État des Nuisances Sonores Aériennes) est obligatoire depuis le <strong>Décret de mai 2022</strong>. Il concerne tous les biens situés dans un <strong>Plan d'Exposition au Bruit (PEB)</strong> d'aérodrome. Géodiag vérifie automatiquement si votre adresse est concernée — cette vérification est <strong>incluse dans les 9,90 €</strong>.
               </p>
             </div>
 
