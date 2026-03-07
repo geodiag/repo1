@@ -61,6 +61,10 @@ interface MapExplorerProps {
   parcelGeometry?: object | null;
   /** Référence cadastrale affichée en badge */
   parcelRef?: string;
+  /** Section cadastrale ciblée — utilisée pour le highlighting WFS côté client */
+  parcelSection?: string;
+  /** Numéro de parcelle ciblé — utilisé pour le highlighting WFS côté client */
+  parcelNumero?: string;
   /** CSS height — défaut 100% */
   height?: number | string;
 }
@@ -136,7 +140,7 @@ function tooltipHTML(p: Record<string, any>): string {
 
 // ─── Composant ───────────────────────────────────────────────────────────────
 export default function MapExplorer({
-  lat, lng, parcelGeometry, parcelRef, height = "100%",
+  lat, lng, parcelGeometry, parcelRef, parcelSection, parcelNumero, height = "100%",
 }: MapExplorerProps) {
   const divRef          = useRef<HTMLDivElement>(null);
   const mapRef          = useRef<any>(null);
@@ -144,6 +148,8 @@ export default function MapExplorer({
   const selectedRef     = useRef<any>(null);   // parcelle ciblée (verte)
   const timerRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef        = useRef<AbortController | null>(null);
+  const targetSectionRef = useRef<string | null>(null);  // section cadastrale ciblée
+  const targetNumeroRef  = useRef<string | null>(null);  // numéro de parcelle ciblé
   const [ready,         setReady]         = useState(false);
   const [loadingWFS,    setLoadingWFS]    = useState(false);
   const [zoom,          setZoom]          = useState(6);
@@ -253,8 +259,31 @@ export default function MapExplorer({
           fillColor  : "#003189",
         },
         onEachFeature(feature: any, layer: any) {
+          const p = feature.properties;
+
+          // ── Détection de la parcelle ciblée (matching section + numéro WFS) ──
+          // On lit les refs au moment de l'appel → valeur toujours à jour
+          const sec = targetSectionRef.current;
+          const num = targetNumeroRef.current;
+          const isTarget = !!(
+            sec && num && sec !== "–" && num !== "–"
+            && p.section === sec && p.numero === num
+          );
+
+          // Style initial : transparent pour toutes sauf la parcelle ciblée
+          if (isTarget) {
+            layer.setStyle({
+              color      : "#000091",
+              weight     : 2,
+              fillColor  : "#000091",
+              fillOpacity: 0.12,
+            });
+            // Passer au premier plan après que Leaflet a fini de rendre la couche
+            setTimeout(() => layer.bringToFront(), 0);
+          }
+
           // Tooltip sticky coloré
-          layer.bindTooltip(tooltipHTML(feature.properties), {
+          layer.bindTooltip(tooltipHTML(p), {
             sticky   : true,
             direction: "right",
             offset   : [14, 0],
@@ -264,11 +293,21 @@ export default function MapExplorer({
 
           layer.on({
             mouseover(e: any) {
-              e.target.setStyle({ weight: 2, fillOpacity: 0.18 });
+              e.target.setStyle({ weight: 2, fillOpacity: isTarget ? 0.22 : 0.18 });
               e.target.bringToFront();
             },
             mouseout(e: any) {
-              e.target.setStyle({ weight: 0, fillOpacity: 0 });
+              if (isTarget) {
+                // Restaurer le style "ciblé" — ne pas effacer le contour bleu
+                e.target.setStyle({
+                  color      : "#000091",
+                  weight     : 2,
+                  fillColor  : "#000091",
+                  fillOpacity: 0.12,
+                });
+              } else {
+                e.target.setStyle({ weight: 0, fillOpacity: 0 });
+              }
             },
           });
         },
@@ -288,6 +327,23 @@ export default function MapExplorer({
     if (!mapRef.current || !lat || !lng) return;
     mapRef.current.flyTo([lat, lng], 18, { duration: 0.8 });
   }, [lat, lng]);
+
+  // ── Mettre à jour la parcelle ciblée quand section/numéro changent ────────
+  // On stocke les valeurs dans des refs (pas de re-render) puis on recharge
+  // le WFS pour que onEachFeature applique le style highlight sur la bonne parcelle.
+  useEffect(() => {
+    targetSectionRef.current = parcelSection ?? null;
+    targetNumeroRef.current  = parcelNumero  ?? null;
+
+    if (!ready || !mapRef.current) return;
+    const L = (window as any).L;
+    if (!L) return;
+
+    // Déclencher immédiatement un re-fetch WFS pour appliquer le highlighting
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => fetchWFS(mapRef.current, L), 50);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parcelSection, parcelNumero, ready]);
 
   // ── Parcelle sélectionnée — recréer la couche à chaque changement ────────
   // Dépend aussi de `ready` pour éviter le race condition :

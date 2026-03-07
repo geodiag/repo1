@@ -55,8 +55,8 @@ interface ErpData {
 interface AddressSearchProps {
   onResultsChange?: (hasResults: boolean) => void;
   onAddressSelect?: (coords: { lat: number; lng: number; label: string } | null) => void;
-  /** Remonte la géométrie GeoJSON + la référence cadastrale vers le parent (HeroSection) */
-  onParcelData?: (data: { geoJSON: object | null; ref: string } | null) => void;
+  /** Remonte la géométrie GeoJSON + la référence cadastrale + section/numéro vers le parent (HeroSection) */
+  onParcelData?: (data: { geoJSON: object | null; ref: string; section: string; numero: string } | null) => void;
 }
 
 export default function AddressSearch({ onResultsChange, onAddressSelect, onParcelData }: AddressSearchProps) {
@@ -118,10 +118,12 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
       if (data.success) {
         setErpData(data.risques);
         onResultsChange?.(true);
-        // Remonte la géométrie cadastrale vers HeroSection pour la carte gauche
+        // Remonte la géométrie + section/numéro vers HeroSection pour la carte
         onParcelData?.({
-          geoJSON: data.risques.parcelleGeoJSON ?? null,
-          ref    : data.risques.parcelleRef ?? "–",
+          geoJSON : data.risques.parcelleGeoJSON ?? null,
+          ref     : data.risques.parcelleRef ?? "–",
+          section : data.risques.parcelleSection ?? "–",
+          numero  : data.risques.parcelleNumero ?? "–",
         });
       }
     } catch (err) {

@@ -16,10 +16,12 @@ interface MapCoords {
 
 export default function HeroSection() {
   const [mapCoords, setMapCoords]   = useState<MapCoords | null>(null);
-  // La géométrie GeoJSON + référence cadastrale, remontées par AddressSearch via callback
+  // La géométrie GeoJSON + référence cadastrale + section/numéro, remontées par AddressSearch
   const [parcelData, setParcelData] = useState<{
-    geoJSON: object | null;
-    ref: string;
+    geoJSON : object | null;
+    ref     : string;
+    section : string;
+    numero  : string;
   } | null>(null);
 
   return (
@@ -76,6 +78,8 @@ export default function HeroSection() {
               lng={mapCoords.lng}
               parcelGeometry={parcelData?.geoJSON}
               parcelRef={parcelData?.ref}
+              parcelSection={parcelData?.section}
+              parcelNumero={parcelData?.numero}
               height="100%"
             />
           </div>
@@ -98,6 +102,8 @@ export default function HeroSection() {
           lng={mapCoords?.lng}
           parcelGeometry={parcelData?.geoJSON}
           parcelRef={parcelData?.ref}
+          parcelSection={parcelData?.section}
+          parcelNumero={parcelData?.numero}
           height="100%"
         />
       </div>
