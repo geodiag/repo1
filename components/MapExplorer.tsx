@@ -250,6 +250,19 @@ export default function MapExplorer({
 
       wfsLayerRef.current.clearLayers();
 
+      // ── Debug : afficher les champs de la 1ère feature WFS pour vérifier le format
+      if (gj.features?.length > 0) {
+        const sample = gj.features[0].properties;
+        console.log("[MapExplorer] 🗺️ WFS sample props:", {
+          section: sample.section,
+          numero : sample.numero,
+          id     : sample.id_parcelle ?? sample.id,
+        });
+        if (targetSectionRef.current) {
+          console.log("[MapExplorer] 🔍 Recherche:", targetSectionRef.current, "/", targetNumeroRef.current);
+        }
+      }
+
       L.geoJSON(gj, {
         style: {
           // Transparent par défaut : l'utilisateur voit le WMS en dessous
@@ -262,13 +275,13 @@ export default function MapExplorer({
           const p = feature.properties;
 
           // ── Détection de la parcelle ciblée (matching section + numéro WFS) ──
-          // On lit les refs au moment de l'appel → valeur toujours à jour
           const sec = targetSectionRef.current;
           const num = targetNumeroRef.current;
           const isTarget = !!(
             sec && num && sec !== "–" && num !== "–"
             && p.section === sec && p.numero === num
           );
+          if (isTarget) console.log("[MapExplorer] ✅ MATCH trouvé ! section:", p.section, "/ numero:", p.numero);
 
           // Style initial : transparent pour toutes sauf la parcelle ciblée
           if (isTarget) {
@@ -329,17 +342,16 @@ export default function MapExplorer({
   }, [lat, lng]);
 
   // ── Mettre à jour la parcelle ciblée quand section/numéro changent ────────
-  // On stocke les valeurs dans des refs (pas de re-render) puis on recharge
-  // le WFS pour que onEachFeature applique le style highlight sur la bonne parcelle.
   useEffect(() => {
     targetSectionRef.current = parcelSection ?? null;
     targetNumeroRef.current  = parcelNumero  ?? null;
+
+    console.log("[MapExplorer] 🎯 Target mis à jour →", parcelSection, parcelNumero, "| ready:", ready);
 
     if (!ready || !mapRef.current) return;
     const L = (window as any).L;
     if (!L) return;
 
-    // Déclencher immédiatement un re-fetch WFS pour appliquer le highlighting
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => fetchWFS(mapRef.current, L), 50);
   // eslint-disable-next-line react-hooks/exhaustive-deps
