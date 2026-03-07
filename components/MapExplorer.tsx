@@ -102,11 +102,10 @@ function tooltipHTML(p: Record<string, any>): string {
   const prefixe = p.prefixe ?? p.code_arr ?? "000";
   const section = p.section ?? "–";
   const numero  = p.numero  ?? p.numero_parcelle ?? "–";
-  // contenance = centiares (1 ca = 1 m²/100) → on divise par 100 pour avoir les ares,
-  // puis * 100 pour m² = on divise juste par 1 pour m² si contenance est en m²
-  // En réalité IGN envoie des centiares : 1 are = 100 m² = 10 000 ca → 1 ca = 0.01 m²
+  // contenance IGN = centiares. 1 centiare = 1 m² (1 are = 100 m² = 100 ca)
+  // → on affiche directement la valeur, sans division
   const surfaceM2 = p.contenance
-    ? `${Math.round(p.contenance / 100).toLocaleString("fr-FR")} m²`
+    ? `${Math.round(p.contenance).toLocaleString("fr-FR")} m²`
     : "–";
 
   return `
@@ -193,9 +192,9 @@ export default function MapExplorer({
 
       // ── Couche WFS interactive (remplie dynamiquement) ─────────────────
       wfsLayerRef.current  = L.layerGroup().addTo(map);
-      // ── Couche parcelle sélectionnée ───────────────────────────────────
+      // ── Couche parcelle sélectionnée — contour fin bleu France ────────
       selectedRef.current  = L.geoJSON(null, {
-        style: { color: "#22c55e", weight: 3, fillColor: "#22c55e", fillOpacity: 0.28 },
+        style: { color: "#000091", weight: 1.5, fillColor: "#000091", fillOpacity: 0.08 },
       }).addTo(map);
 
       // ── Chargement WFS au mouvement ─────────────────────────────────────
@@ -313,7 +312,7 @@ export default function MapExplorer({
 
       {/* Badge parcelle ciblée ── superposé haut-gauche */}
       {ready && parcelRef && parcelRef !== "–" && (
-        <div className="absolute top-3 left-3 z-[1000] bg-white shadow-lg border-l-[3px] border-l-green-500 border border-gray-200 px-3 py-2">
+        <div className="absolute top-3 left-3 z-[1000] bg-white shadow-lg border-l-[3px] border-l-bleu-france border border-gray-200 px-3 py-2">
           <p className="text-[9px] uppercase tracking-widest font-black text-gray-400 mb-0.5">
             Parcelle ciblée · IGN
           </p>

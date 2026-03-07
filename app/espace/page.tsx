@@ -62,7 +62,7 @@ function TabMonRapport({ erp, user }: { erp: ErpData; user: UserData }) {
 
   // Vérifier si le rapport a déjà été commandé (session en cours)
   useEffect(() => {
-    const downloaded = sessionStorage.getItem("geodiag_rapport_done");
+    const downloaded = localStorage.getItem("geodiag_rapport_done");
     if (downloaded === "1") setReportDownloaded(true);
   }, []);
 
@@ -243,7 +243,9 @@ function TabMonBien({ erp, user }: { erp: ErpData; user: UserData }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
             <InfoBox label="Section" value={erp.parcelleSection} highlight />
             <InfoBox label="Numéro"  value={erp.parcelleNumero}  highlight />
-            <InfoBox label="Superficie" value={erp.parcelleSurface} />
+            {erp.anneeConstruction && erp.anneeConstruction !== "Non disponible" && (
+            <InfoBox label="Année de construction" value={erp.anneeConstruction} />
+          )}
             <InfoBox label="Commune"    value={erp.parcelleCommune || user.city || "–"} />
           </div>
           {erp.parcelleRef && erp.parcelleRef !== "–" && (
@@ -496,7 +498,7 @@ function TabMesDiagnostics({ user }: { user: UserData }) {
 function TabHistorique({ user }: { user: UserData }) {
   // Vérifier si un rapport a été commandé
   const hasOrder = typeof window !== "undefined"
-    && sessionStorage.getItem("geodiag_rapport_done") === "1";
+    && localStorage.getItem("geodiag_rapport_done") === "1";
 
   return (
     <div className="space-y-4">
@@ -591,8 +593,8 @@ export default function EspacePage() {
   // Lire les données de session au montage
   useEffect(() => {
     try {
-      const erp  = sessionStorage.getItem("geodiag_erp");
-      const user = sessionStorage.getItem("geodiag_user");
+      const erp  = localStorage.getItem("geodiag_erp");
+      const user = localStorage.getItem("geodiag_user");
       if (erp)  setErpData(JSON.parse(erp));
       if (user) setUserData(JSON.parse(user));
     } catch {
@@ -607,7 +609,7 @@ export default function EspacePage() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has("session_id")) {
       // On vient de valider le paiement — marquer le rapport comme téléchargé
-      sessionStorage.setItem("geodiag_rapport_done", "1");
+      localStorage.setItem("geodiag_rapport_done", "1");
       // Nettoyer l'URL
       window.history.replaceState({}, "", "/espace");
     }

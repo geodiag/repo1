@@ -204,10 +204,12 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
                   <span>Zone PLU : <span className="text-bleu-france">{erpData.zonePLU}</span></span>
                 </div>
               )}
-              <div className="inline-flex items-center gap-1 bg-white border border-gray-300 px-3 py-1 text-xs font-bold text-gray-700 shadow-sm">
-                <span>📐</span>
-                <span>{erpData.parcelleSurface}</span>
-              </div>
+              {erpData.anneeConstruction && erpData.anneeConstruction !== "Non disponible" && (
+                <div className="inline-flex items-center gap-1 bg-white border border-gray-300 px-3 py-1 text-xs font-bold text-gray-700 shadow-sm">
+                  <span>🏗️</span>
+                  <span>Construit en <span className="text-bleu-france">{erpData.anneeConstruction}</span></span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -238,13 +240,13 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
                         {erpData.parcelleNumero}
                       </p>
                     </div>
-                    {erpData.parcelleSurface !== "Non disponible" && (
+                    {erpData.anneeConstruction && erpData.anneeConstruction !== "Non disponible" && (
                       <>
                         <div className="text-gray-300 text-xl font-thin">|</div>
                         <div className="text-center">
-                          <p className="text-[9px] uppercase text-gray-400 font-bold">Superficie</p>
+                          <p className="text-[9px] uppercase text-gray-400 font-bold">Construit en</p>
                           <p className="text-sm font-black text-gray-800 font-mono leading-none">
-                            {erpData.parcelleSurface}
+                            {erpData.anneeConstruction}
                           </p>
                         </div>
                       </>
@@ -429,8 +431,8 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
                 onClick={() => {
                   if (!selectedAddress || !erpData) return;
                   // Sauvegarder les données en session pour les retrouver dans l'espace
-                  sessionStorage.setItem('geodiag_erp',     JSON.stringify(erpData));
-                  sessionStorage.setItem('geodiag_address', JSON.stringify(selectedAddress));
+                  localStorage.setItem('geodiag_erp',     JSON.stringify(erpData));
+                  localStorage.setItem('geodiag_address', JSON.stringify(selectedAddress));
                   // Construire la ref de la parcelle pour l'URL (ex: 33063000CW0162)
                   const ref = (erpData.parcelleRef && erpData.parcelleRef !== '–')
                     ? erpData.parcelleRef

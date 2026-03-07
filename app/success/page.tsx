@@ -85,7 +85,7 @@ function SuccessContent() {
         URL.revokeObjectURL(url);
 
         // Marquer le rapport comme téléchargé dans la session (pour l'espace propriétaire)
-        sessionStorage.setItem("geodiag_rapport_done", "1");
+        localStorage.setItem("geodiag_rapport_done", "1");
 
         setStatus("done");
 

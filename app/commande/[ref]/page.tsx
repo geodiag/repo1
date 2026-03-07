@@ -67,12 +67,12 @@ function CommandeContent() {
     setSubmitting(true);
 
     // Sauvegarder les infos utilisateur dans la session navigateur
-    sessionStorage.setItem("geodiag_user", JSON.stringify({
+    localStorage.setItem("geodiag_user", JSON.stringify({
       ...form,
       ref, adresse, lat, lng, insee, city,
     }));
 
-    // Rediriger vers l'espace propriétaire
+    // Rediriger vers mon espace
     window.location.href = "/espace";
   }
 
@@ -278,7 +278,7 @@ function CommandeContent() {
                 </>
               ) : (
                 <>
-                  Accéder à mon espace propriétaire
+                  Accéder à mon espace
                   <span className="text-lg" aria-hidden="true">→</span>
                 </>
               )}
