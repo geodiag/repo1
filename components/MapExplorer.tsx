@@ -192,10 +192,8 @@ export default function MapExplorer({
 
       // ── Couche WFS interactive (remplie dynamiquement) ─────────────────
       wfsLayerRef.current  = L.layerGroup().addTo(map);
-      // ── Couche parcelle sélectionnée — contour fin bleu France ────────
-      selectedRef.current  = L.geoJSON(null, {
-        style: { color: "#000091", weight: 1.5, fillColor: "#000091", fillOpacity: 0.08 },
-      }).addTo(map);
+      // NOTE : la couche de parcelle sélectionnée est créée dynamiquement
+      // dans le useEffect [parcelGeometry, ready] — pas ici.
 
       // ── Chargement WFS au mouvement ─────────────────────────────────────
       const triggerWFS = () => {
@@ -291,17 +289,36 @@ export default function MapExplorer({
     mapRef.current.flyTo([lat, lng], 18, { duration: 0.8 });
   }, [lat, lng]);
 
-  // ── Mettre à jour la parcelle sélectionnée (verte) ───────────────────────
+  // ── Parcelle sélectionnée — recréer la couche à chaque changement ────────
+  // Dépend aussi de `ready` pour éviter le race condition :
+  // si la géométrie arrive avant la fin du boot async, l'effet se relancera
+  // une fois la carte prête au lieu de sortir silencieusement.
   useEffect(() => {
-    if (!selectedRef.current) return;
-    selectedRef.current.clearLayers();
-    if (!parcelGeometry) return;
     const L = (window as any).L;
-    if (!L) return;
+    if (!ready || !L || !mapRef.current) return;
+
+    // Supprimer l'ancienne couche si elle existe
+    if (selectedRef.current) {
+      selectedRef.current.remove();
+      selectedRef.current = null;
+    }
+    if (!parcelGeometry) return;
+
     try {
-      selectedRef.current.addData(parcelGeometry as any);
-    } catch { /* géométrie invalide */ }
-  }, [parcelGeometry]);
+      // On recrée la couche directement avec les données → le style s'applique
+      // correctement via la forme fonction (plus fiable que l'objet statique)
+      selectedRef.current = L.geoJSON(parcelGeometry as any, {
+        style: () => ({
+          color      : "#000091",
+          weight     : 1.5,
+          fillColor  : "#000091",
+          fillOpacity: 0.08,
+        }),
+      }).addTo(mapRef.current);
+    } catch (e) {
+      console.warn("[MapExplorer] Géométrie parcelle invalide :", e);
+    }
+  }, [parcelGeometry, ready]); // `ready` garantit que mapRef.current est initialisé
 
   // ─── Rendu ────────────────────────────────────────────────────────────────
   return (
