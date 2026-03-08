@@ -186,15 +186,20 @@ export default function MapExplorer({
         attribution : '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>',
       }).addTo(map);
 
-      // ── WMS IGN — plan cadastral (fond visuel, tous niveaux de zoom) ───
-      L.tileLayer.wms(IGN_WMS, {
-        layers     : "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
-        format     : "image/png",
-        transparent: true,
-        version    : "1.3.0",
-        opacity    : 0.65,
-        attribution: "© IGN",
-      }).addTo(map);
+      // ── WMS IGN — plan cadastral (DÉSACTIVÉ — source des 429 Too Many Requests) ──
+      // Le WMS charge des tuiles pour toutes les parcelles de France en fond.
+      // Avec 2 instances de MapExplorer + React Strict Mode, le nombre de requêtes
+      // explose et dépasse le rate-limit de data.geopf.fr (429).
+      // Réactiver une fois le mode production confirmé et une seule instance active.
+      //
+      // L.tileLayer.wms(IGN_WMS, {
+      //   layers     : "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
+      //   format     : "image/png",
+      //   transparent: true,
+      //   version    : "1.3.0",
+      //   opacity    : 0.65,
+      //   attribution: "© IGN",
+      // }).addTo(map);
 
       // ── Couche WFS interactive (remplie dynamiquement) ─────────────────
       wfsLayerRef.current  = L.layerGroup().addTo(map);

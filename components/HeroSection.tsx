@@ -94,18 +94,31 @@ export default function HeroSection() {
 
       {/* ══════════════════════════════════════════════════════════════════
           COLONNE DROITE — MapExplorer sticky (desktop uniquement)
-          sticky top-0 + h-screen → reste ancré pendant que la gauche défile
+          Montée uniquement après saisie d'une adresse pour éviter
+          les requêtes WMS/WFS inutiles au chargement de la page.
       ══════════════════════════════════════════════════════════════════ */}
-      <div className="hidden lg:block sticky top-0 h-screen">
-        <MapExplorer
-          lat={mapCoords?.lat}
-          lng={mapCoords?.lng}
-          parcelGeometry={parcelData?.geoJSON}
-          parcelRef={parcelData?.ref}
-          parcelSection={parcelData?.section}
-          parcelNumero={parcelData?.numero}
-          height="100%"
-        />
+      <div className="hidden lg:flex sticky top-0 h-screen items-center justify-center bg-[#e8e4dc]">
+        {mapCoords ? (
+          <MapExplorer
+            lat={mapCoords.lat}
+            lng={mapCoords.lng}
+            parcelGeometry={parcelData?.geoJSON}
+            parcelRef={parcelData?.ref}
+            parcelSection={parcelData?.section}
+            parcelNumero={parcelData?.numero}
+            height="100%"
+          />
+        ) : (
+          /* Placeholder avant toute recherche — aucune requête réseau */
+          <div className="flex flex-col items-center gap-4 text-gray-400 select-none w-full h-full justify-center bg-[#e8e4dc]">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="opacity-40">
+              <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20A14.5 14.5 0 0 0 12 2"/><path d="M2 12h20"/>
+            </svg>
+            <p className="text-sm font-medium tracking-wide opacity-60">
+              Saisissez une adresse pour afficher la carte
+            </p>
+          </div>
+        )}
       </div>
 
     </div>
