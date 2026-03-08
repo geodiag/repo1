@@ -182,61 +182,6 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
             </div>
           </div>
 
-          {/* ── Badge cadastral officiel ───────────────────────────────────── */}
-          {(erpData.parcelleSection !== "–" || erpData.parcelleNumero !== "–") && (
-            <div className="px-5 py-4 border-b border-gray-200 bg-white">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-blue-50 border border-bleu-france/30">
-                {/* Icône officielle */}
-                <div className="shrink-0 w-10 h-10 bg-bleu-france flex items-center justify-center text-white text-lg">
-                  🏛️
-                </div>
-                {/* Références */}
-                <div className="flex-1">
-                  <p className="text-[10px] uppercase font-black text-gray-500 tracking-widest mb-1">
-                    Parcelle cadastrale identifiée — IGN
-                  </p>
-                  <div className="flex flex-wrap gap-3 items-center">
-                    <div className="text-center">
-                      <p className="text-[9px] uppercase text-gray-400 font-bold">Section</p>
-                      <p className="text-xl font-black text-bleu-france font-mono leading-none">
-                        {erpData.parcelleSection}
-                      </p>
-                    </div>
-                    <div className="text-gray-300 text-xl font-thin">|</div>
-                    <div className="text-center">
-                      <p className="text-[9px] uppercase text-gray-400 font-bold">Numéro</p>
-                      <p className="text-xl font-black text-bleu-france font-mono leading-none">
-                        {erpData.parcelleNumero}
-                      </p>
-                    </div>
-                    {erpData.anneeConstruction
-                      && erpData.anneeConstruction !== "Non disponible"
-                      && erpData.anneeConstruction !== "Non recensée" && (
-                      <>
-                        <div className="text-gray-300 text-xl font-thin">|</div>
-                        <div className="text-center">
-                          <p className="text-[9px] uppercase text-gray-400 font-bold">Construit en</p>
-                          <p className="text-sm font-black text-gray-800 font-mono leading-none">
-                            {erpData.anneeConstruction}
-                          </p>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {/* Réf complète */}
-                <div className="shrink-0 text-right hidden sm:block">
-                  <p className="text-[9px] uppercase text-gray-400 font-bold mb-1">Réf. complète</p>
-                  <p className="text-xs font-mono bg-white border border-gray-300 px-2 py-1 text-gray-700">
-                    {erpData.parcelleRef !== "–"
-                      ? erpData.parcelleRef
-                      : selectedAddress?.properties.id.split("_")[0]}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* ── Grille : Risques + Sources ────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-5 border-b border-gray-200">
             <div className="lg:col-span-2 p-5 border-b lg:border-b-0 lg:border-r border-gray-200 space-y-3">
