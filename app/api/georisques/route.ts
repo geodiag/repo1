@@ -18,9 +18,16 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Headers standards — APICarto IGN filtre parfois les User-Agents non-browser
     const headers = {
-      'Accept': 'application/json',
-      'User-Agent': 'Geodiag-SaaS/1.0'
+      'Accept'    : 'application/json, */*',
+      'User-Agent': 'Mozilla/5.0 (compatible; Geodiag/1.0)',
+    };
+    // Headers spécifiques APICarto (plus permissif avec Origin/Referer)
+    const headersCadastre = {
+      ...headers,
+      'Origin' : 'https://apicarto.ign.fr',
+      'Referer': 'https://apicarto.ign.fr/',
     };
 
     // ── URLs des 9 endpoints existants ───────────────────────────────────────
@@ -41,7 +48,13 @@ export async function GET(request: Request) {
       + `&sort=-_score`;
     // _limit=1 : parcelle la plus proche seulement (évite les faux positifs adjacents)
     // code_insee : filtre sur la commune, évite les débordements aux limites communales
-    const urlCadastre   = `https://apicarto.ign.fr/api/cadastre/parcelle?lon=${lng}&lat=${lat}&code_insee=${insee}&_limit=1`;
+    const urlCadastre    = `https://apicarto.ign.fr/api/cadastre/parcelle?lon=${lng}&lat=${lat}&code_insee=${insee}&_limit=1`;
+    // Fallback WFS Géoportail (data.geopf.fr) — si APICarto est indisponible depuis Vercel
+    const d = 0.0003;
+    const urlCadastreWFS = `https://data.geopf.fr/wfs/ows?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature`
+      + `&TYPENAMES=CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle`
+      + `&OUTPUTFORMAT=application/json&count=1`
+      + `&BBOX=${parseFloat(lng)-d},${parseFloat(lat)-d},${parseFloat(lng)+d},${parseFloat(lat)+d},EPSG:4326`;
     const urlGPU        = `https://apicarto.ign.fr/api/gpu/zone-urba?geom=${encodeURIComponent(JSON.stringify({ type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] }))}`;
     const urlDVF        = `https://api.dvf.etalab.gouv.fr/geomap/mutations?lat=${lat}&lon=${lng}&dist=300`;
     const urlBruit      = `https://georisques.gouv.fr/api/v1/bruit_aerodromes?latlon=${lng},${lat}&rayon=30000`;
@@ -68,7 +81,7 @@ export async function GET(request: Request) {
       fetch(urlCatnat,    { headers, cache: 'no-store' }).catch(() => null),
       fetch(urlSismicite, { headers, cache: 'no-store' }).catch(() => null),
       fetch(urlDpe,       { headers, cache: 'no-store' }).catch(() => null),
-      fetch(urlCadastre,  { headers, cache: 'no-store' }).catch(() => null),
+      fetch(urlCadastre,  { headers: headersCadastre, cache: 'no-store' }).catch(() => null),
       fetch(urlGPU,       { headers, cache: 'no-store' }).catch(() => null),
       fetch(urlDVF,       { headers, cache: 'no-store' }).catch(() => null),
       fetch(urlBruit,     { headers, cache: 'no-store' }).catch(() => null),
@@ -87,7 +100,24 @@ export async function GET(request: Request) {
     const dataCatnat    = resCatnat?.ok    ? await resCatnat.json().catch(()    => ({ data: [], total: 0 })) : { data: [], total: 0 };
     const dataSismicite = resSismicite?.ok ? await resSismicite.json().catch(() => ({ data: [] }))     : { data: [] };
     const dataDpe       = resDpe?.ok       ? await resDpe.json().catch(()       => ({ results: [] }))  : { results: [] };
-    const dataCadastre  = resCadastre?.ok  ? await resCadastre.json().catch(()  => ({ features: [] })) : { features: [] };
+    // Cadastre — log du statut HTTP pour diagnostiquer les blocages APICarto
+    console.log(`🗺️ APICarto status: ${resCadastre?.status ?? 'null (fetch failed)'}`);
+    let dataCadastre: { features?: any[]; numberReturned?: number } = { features: [] };
+    if (resCadastre?.ok) {
+      dataCadastre = await resCadastre.json().catch(() => ({ features: [] }));
+    } else {
+      // APICarto indisponible — on tente le WFS Géoportail en fallback
+      console.log('🗺️ APICarto KO → fallback WFS Géoportail');
+      try {
+        const resCadastreWFS = await fetch(urlCadastreWFS, { headers, cache: 'no-store' });
+        console.log(`🗺️ WFS Géoportail status: ${resCadastreWFS.status}`);
+        if (resCadastreWFS.ok) {
+          dataCadastre = await resCadastreWFS.json().catch(() => ({ features: [] }));
+        }
+      } catch (e) {
+        console.warn('🗺️ WFS Géoportail KO aussi:', e);
+      }
+    }
     const dataGPU       = resGPU?.ok       ? await resGPU.json().catch(()       => ({ features: [] })) : { features: [] };
     const dataDVF       = resDVF?.ok       ? await resDVF.json().catch(()       => ({ features: [] })) : { features: [] };
     const dataBruit     = resBruit?.ok     ? await resBruit.json().catch(()     => ({ data: [] }))     : { data: [] };

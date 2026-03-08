@@ -83,13 +83,77 @@ export default function ParcelMap({
   height = 320,
 }: ParcelMapProps) {
   const mapRef             = useRef<MapRef>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapLoaded, setMapLoaded]         = useState(false);
+  const [clientGeometry, setClientGeometry] = useState<object | null>(null);
   const onLoad             = useCallback(() => setMapLoaded(true), []);
 
-  // ── Normalisation GeoJSON (mémoïsée — ne recalcule que si parcelGeometry change)
+  // ── Fallback client-side : si parcelGeometry est null (API serveur a échoué),
+  // le navigateur fait lui-même l'appel APICarto IGN avec ses propres headers
+  // HTTP (User-Agent, Origin browser) — beaucoup plus fiable que depuis Vercel.
+  useEffect(() => {
+    // Si le parent a déjà fourni la géométrie, pas besoin de fetcher
+    if (parcelGeometry) { setClientGeometry(null); return; }
+
+    let cancelled = false;
+    setClientGeometry(null);
+
+    async function fetchClientSide() {
+      // Tentative 1 : APICarto IGN (point exact, résultat le plus précis)
+      try {
+        const url = `https://apicarto.ign.fr/api/cadastre/parcelle?lon=${lng}&lat=${lat}&_limit=1`;
+        const res = await fetch(url, {
+          headers: { Accept: 'application/json' },
+          signal : AbortSignal.timeout(7000),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const feat = json.features?.[0];
+          if (feat?.geometry && !cancelled) {
+            console.log('[ParcelMap] géométrie ← APICarto (client-side)');
+            setClientGeometry({ type: 'Feature', geometry: feat.geometry, properties: feat.properties ?? {} });
+            return;
+          }
+        }
+        console.warn('[ParcelMap] APICarto vide ou KO:', res.status);
+      } catch (e) {
+        console.warn('[ParcelMap] APICarto client-side KO:', e);
+      }
+
+      // Tentative 2 : WFS Géoportail (CORS garanti, data.geopf.fr)
+      try {
+        const d   = 0.0003;
+        const url = `https://data.geopf.fr/wfs/ows?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature`
+          + `&TYPENAMES=CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle`
+          + `&OUTPUTFORMAT=application/json&count=1`
+          + `&BBOX=${lng - d},${lat - d},${lng + d},${lat + d},EPSG:4326`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (res.ok) {
+          const json = await res.json();
+          const feat = json.features?.[0];
+          if (feat?.geometry && !cancelled) {
+            console.log('[ParcelMap] géométrie ← WFS Géoportail (client-side)');
+            setClientGeometry({ type: 'Feature', geometry: feat.geometry, properties: feat.properties ?? {} });
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('[ParcelMap] WFS client-side KO:', e);
+      }
+
+      console.warn('[ParcelMap] aucune source n\'a retourné de géométrie pour', lat, lng);
+    }
+
+    fetchClientSide();
+    return () => { cancelled = true; };
+  }, [lat, lng, parcelGeometry]); // relance si nouvelle adresse OU si prop arrive
+
+  // ── Normalisation GeoJSON — prop parent en priorité, sinon fetch client-side
   const geojson = useMemo<GeoJSON.FeatureCollection | null>(
-    () => (parcelGeometry ? toFeatureCollection(parcelGeometry) : null),
-    [parcelGeometry],
+    () => {
+      const raw = parcelGeometry ?? clientGeometry;
+      return raw ? toFeatureCollection(raw) : null;
+    },
+    [parcelGeometry, clientGeometry],
   );
 
   // ── Navigation → flyTo quand lat/lng change (nouvelle adresse saisie)
@@ -184,10 +248,15 @@ export default function ParcelMap({
         className="absolute top-2 left-10 z-[9999] flex items-center gap-1 rounded px-2 py-0.5 font-mono text-[9px] font-bold shadow pointer-events-none"
         style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}
       >
-        {geojson
-          ? <span style={{ color: "#4ade80" }}>🟢 GeoJSON OK — {geojson.features.length} feat.</span>
-          : <span style={{ color: "#f87171" }}>🔴 GeoJSON null</span>
-        }
+        {geojson ? (
+          <span style={{ color: "#4ade80" }}>
+            🟢 GeoJSON OK ({parcelGeometry ? "serveur" : "client"}) — {geojson.features.length} feat.
+          </span>
+        ) : (
+          <span style={{ color: "#f87171" }}>
+            🔴 GeoJSON null {lat ? "⏳ fetch…" : "— pas de coords"}
+          </span>
+        )}
       </div>
 
       {/* ── Spinner init ────────────────────────────────────────────────────── */}
