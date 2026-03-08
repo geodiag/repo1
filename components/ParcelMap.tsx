@@ -17,7 +17,7 @@
  *   const ParcelMap = dynamic(() => import("@/components/ParcelMap"), { ssr: false });
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Map, {
   Source,
   Layer,
@@ -80,6 +80,46 @@ export default function ParcelMap({
   const onMapLoad = useCallback(() => setMapLoaded(true), []);
 
   // ════════════════════════════════════════════════════════════════════════════
+  // NORMALISATION GEOJSON — garantit un FeatureCollection valide pour MapLibre.
+  //
+  // MapLibre accepte : Feature | FeatureCollection | Geometry
+  // Mais certaines APIs retournent directement une Geometry brute (sans "type:Feature")
+  // → on enveloppe systématiquement dans une FeatureCollection pour être sûr.
+  //
+  // Cas traités :
+  //   null / undefined        → null (Source non rendue)
+  //   { type: "FeatureCollection" } → passé tel quel
+  //   { type: "Feature" }     → encapsulé dans une FeatureCollection
+  //   { type: "Polygon"|... } → encapsulé dans Feature → FeatureCollection
+  // ════════════════════════════════════════════════════════════════════════════
+  const formattedGeojson = useMemo<GeoJSON.FeatureCollection | null>(() => {
+    if (!parcelGeometry) return null;
+    const g = parcelGeometry as any;
+
+    if (g.type === "FeatureCollection") {
+      // Déjà au bon format
+      return g as GeoJSON.FeatureCollection;
+    }
+
+    if (g.type === "Feature") {
+      // Encapsule dans une FeatureCollection
+      return { type: "FeatureCollection", features: [g] };
+    }
+
+    // Géométrie brute (Polygon, MultiPolygon…) → Feature → FeatureCollection
+    if (g.type && g.coordinates) {
+      return {
+        type    : "FeatureCollection",
+        features: [{ type: "Feature", geometry: g, properties: {} }],
+      };
+    }
+
+    // Format inconnu — on tente quand même de le passer à MapLibre
+    console.warn("[ParcelMap] Format GeoJSON inattendu :", g.type ?? typeof g);
+    return null;
+  }, [parcelGeometry]);
+
+  // ════════════════════════════════════════════════════════════════════════════
   // EFFET NAVIGATION — Centrer la carte sur la nouvelle adresse
   // S'exécute quand lat/lng change (nouvelle saisie utilisateur).
   // fitBounds() surpassera ce flyTo si parcelGeometry arrive juste après.
@@ -99,11 +139,11 @@ export default function ParcelMap({
   // puis react-map-gl fitBounds avec animation fluide.
   // ════════════════════════════════════════════════════════════════════════════
   useEffect(() => {
-    if (!mapLoaded || !mapRef.current || !parcelGeometry) return;
+    if (!mapLoaded || !mapRef.current || !formattedGeojson) return;
 
     try {
       // turf.bbox retourne [minX, minY, maxX, maxY] = [minLng, minLat, maxLng, maxLat]
-      const [minLng, minLat, maxLng, maxLat] = bbox(parcelGeometry as Parameters<typeof bbox>[0]);
+      const [minLng, minLat, maxLng, maxLat] = bbox(formattedGeojson);
 
       mapRef.current.fitBounds(
         [[minLng, minLat], [maxLng, maxLat]],
@@ -116,7 +156,7 @@ export default function ParcelMap({
     } catch (e) {
       console.warn("[ParcelMap] fitBounds error:", e);
     }
-  }, [parcelGeometry, mapLoaded]);
+  }, [formattedGeojson, mapLoaded]);
 
   return (
     <div
@@ -148,11 +188,11 @@ export default function ParcelMap({
         />
 
         {/* ── Polygone de la parcelle cadastrale ────────────────────────── */}
-        {parcelGeometry && (
+        {formattedGeojson && (
           <Source
             id="parcel"
             type="geojson"
-            data={parcelGeometry as GeoJSON.Feature | GeoJSON.FeatureCollection}
+            data={formattedGeojson}
           >
             {/* Remplissage émeraude semi-transparent */}
             <Layer {...LAYER_FILL} />
@@ -161,6 +201,17 @@ export default function ParcelMap({
           </Source>
         )}
       </Map>
+
+      {/* ── Badge debug GeoJSON (haut droit, fond sombre) ─────────────────── */}
+      {/* À SUPPRIMER une fois le polygone confirmé en production             */}
+      <div className="absolute top-2 right-2 z-[9999] flex items-center gap-1.5 rounded px-2 py-1 text-[10px] font-mono font-bold shadow"
+        style={{ background: "rgba(0,0,0,0.65)", color: "#fff", backdropFilter: "blur(4px)" }}
+      >
+        {formattedGeojson
+          ? <><span style={{ color: "#4ade80" }}>🟢</span> GeoJSON : Validé ({formattedGeojson.features?.length ?? "?"} feat.)</>
+          : <><span style={{ color: "#f87171" }}>🔴</span> GeoJSON : Null</>
+        }
+      </div>
 
       {/* ── Badge référence cadastrale (superposé haut gauche) ────────────── */}
       {parcelRef && parcelRef !== "–" && (
@@ -178,7 +229,7 @@ export default function ParcelMap({
       )}
 
       {/* ── Légende polygone (bas gauche) ─────────────────────────────────── */}
-      {parcelGeometry && (
+      {formattedGeojson && (
         <div className="absolute bottom-6 left-2 z-10 bg-white/90 border border-gray-200 px-2 py-1 shadow-sm flex items-center gap-1.5">
           <span className="inline-block w-3 h-3 rounded-sm border-2 border-emerald-500 bg-emerald-500/30 shrink-0" />
           <span className="text-[9px] font-bold text-gray-600 uppercase tracking-wide">
