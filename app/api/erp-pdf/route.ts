@@ -6,6 +6,25 @@ import fs from 'fs';
 // Forcer le mode dynamique (pas de cache Next.js)
 export const dynamic = 'force-dynamic';
 
+// ⏱️ Augmenter le timeout Vercel à 60s (requis pour pdf-lib sur CERFA 14 pages)
+// Plan Hobby = 10s max ; Plan Pro = 60s. Sur Hobby, simplifie en ne copiant que 3 pages.
+export const maxDuration = 60;
+
+// ── Cache module-level du template CERFA ──────────────────────────────────────
+// Chargé une seule fois au démarrage de la fonction (warm start), pas à chaque requête.
+let _templateBytes: Uint8Array | null = null;
+function getTemplateBytes(): Uint8Array {
+  if (!_templateBytes) {
+    const p = path.join(process.cwd(), 'public', 'exemple-formulaire-etat-des-risques-pollutions-erp.pdf');
+    if (!fs.existsSync(p)) {
+      throw new Error(`Template CERFA introuvable : ${p}`);
+    }
+    _templateBytes = new Uint8Array(fs.readFileSync(p));
+    console.log(`✅ [ERP-PDF] Template chargé : ${(_templateBytes.length / 1024).toFixed(0)} Ko`);
+  }
+  return _templateBytes;
+}
+
 // ── Couleurs DSFR ──────────────────────────────────────────────────────────────
 const BLEU   = rgb(0, 0, 0.569);       // #000091
 const ROUGE  = rgb(0.882, 0, 0.059);   // #e1000f
@@ -64,9 +83,8 @@ export async function POST(request: Request) {
     const r: any = erpData || {};
     console.log('📄 [ERP-PDF] Données reçues — inondation:', r.inondation, 'sismicité:', r.sismicite);
 
-    // ── 2. Charger le template CERFA ─────────────────────────────────────────
-    const templatePath = path.join(process.cwd(), 'public', 'exemple-formulaire-etat-des-risques-pollutions-erp.pdf');
-    const templateBytes = fs.readFileSync(templatePath);
+    // ── 2. Charger le template CERFA (cache module-level) ────────────────────
+    const templateBytes = getTemplateBytes();
     const templateDoc = await PDFDocument.load(templateBytes);
 
     // ── 3. Créer le document final ───────────────────────────────────────────

@@ -39,7 +39,9 @@ export async function GET(request: Request) {
       + `&q=${encodeURIComponent(streetOnly)}`
       + `&q_fields=adresse_ban`
       + `&sort=-_score`;
-    const urlCadastre   = `https://apicarto.ign.fr/api/cadastre/parcelle?lon=${lng}&lat=${lat}`;
+    // _limit=1 : parcelle la plus proche seulement (évite les faux positifs adjacents)
+    // code_insee : filtre sur la commune, évite les débordements aux limites communales
+    const urlCadastre   = `https://apicarto.ign.fr/api/cadastre/parcelle?lon=${lng}&lat=${lat}&code_insee=${insee}&_limit=1`;
     const urlGPU        = `https://apicarto.ign.fr/api/gpu/zone-urba?geom=${encodeURIComponent(JSON.stringify({ type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] }))}`;
     const urlDVF        = `https://api.dvf.etalab.gouv.fr/geomap/mutations?lat=${lat}&lon=${lng}&dist=300`;
     const urlBruit      = `https://georisques.gouv.fr/api/v1/bruit_aerodromes?latlon=${lng},${lat}&rayon=30000`;
@@ -187,9 +189,14 @@ export async function GET(request: Request) {
     let parcelleCommune = "–";
     let parcelleGeoJSON: object | null = null;
 
+    // Log complet pour diagnostiquer ce que l'API IGN retourne réellement
+    console.log(`🗺️ Cadastre raw: total=${dataCadastre.numberReturned ?? dataCadastre.features?.length ?? 0} features`);
     const parcelle = dataCadastre.features?.[0];
     if (parcelle) {
       const props = parcelle.properties || {};
+      // Log toutes les clés reçues pour détecter d'éventuels changements de l'API IGN
+      console.log(`🗺️ Cadastre props keys: ${Object.keys(props).join(', ')}`);
+      console.log(`🗺️ Cadastre props values: ${JSON.stringify(props)}`);
 
       // ── Surface ────────────────────────────────────────────────────────────
       // APICarto IGN : contenance est en CENTIARES (= m², pas en ares)
