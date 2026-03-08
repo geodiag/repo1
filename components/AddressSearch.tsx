@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import LeadForm from "./LeadForm";
+import { AnalysisLoader } from "./AnalysisLoader";
+import type { ErpData } from "@/lib/types";
 
 interface AddressFeature {
   properties: {
@@ -14,42 +16,6 @@ interface AddressFeature {
   geometry: {
     coordinates: [number, number];
   };
-}
-
-interface DvfTransaction {
-  date: string;
-  prix: number;
-  surface: number | null;
-  type: string;
-  prixM2: number | null;
-}
-
-interface ErpData {
-  // Géorisques
-  inondation: boolean;
-  technologique: boolean;
-  sismicite: string;
-  potentielRadon: string;
-  nbCatnat: number;
-  // ADEME
-  anneeConstruction: string;
-  // Cadastre
-  parcelleSurface: string;
-  parcelleRef: string;
-  parcelleSection: string;
-  parcelleNumero: string;
-  parcelleCommune: string;
-  parcelleGeoJSON: object | null;
-  // PLU
-  zonePLU: string;
-  codeZonePLU: string;
-  libelleZone: string;
-  // DVF
-  transactionsRecentes: DvfTransaction[];
-  prixMoyen: string;
-  // ENSA
-  ensaConcerne: boolean;
-  ensaAerodromes: { nom: string; codePEB: string }[];
 }
 
 interface AddressSearchProps {
@@ -67,6 +33,7 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
   const [isErpLoading, setIsErpLoading] = useState(false);
   const [erpData, setErpData] = useState<ErpData | null>(null);
   const [erpError, setErpError] = useState<string | null>(null);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   // Scroll automatique vers les résultats dès qu'ils apparaissent
@@ -112,7 +79,7 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
     const label = address.properties.label;
 
     try {
-      const res = await fetch(`/api/georisques?lat=${lat}&lng=${lng}&insee=${insee}&label=${encodeURIComponent(label)}`);
+      const res = await fetch(`/api/georisques?lat=${lat}&lng=${lng}&insee=${insee}&label=${encodeURIComponent(label)}`, { cache: 'no-store' });
       if (!res.ok) throw new Error("Erreur serveur");
       const data = await res.json();
       if (data.success) {
@@ -178,12 +145,10 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
         </ul>
       )}
 
-      {/* Loader */}
+      {/* Loader par étapes — remplace le spinner simple */}
       {isErpLoading && (
-        <div className="mt-6 p-8 bg-white border border-gray-300 shadow-dsfr flex flex-col items-center justify-center space-y-4">
-          <div className="w-12 h-12 border-4 border-gray-200 border-t-bleu-france rounded-full animate-spin"></div>
-          <p className="font-bold text-gray-900">Interrogation des bases de l'État en cours...</p>
-          <p className="text-xs text-gray-500">Géorisques · ENSA/PEB · Cadastre · PLU · DVF · ADEME</p>
+        <div className="mt-6">
+          <AnalysisLoader isLoading={isErpLoading} />
         </div>
       )}
 
@@ -194,7 +159,7 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
           {/* ── En-tête dossier ─────────────────────────────────────────── */}
           <div className="bg-fond-gris border-b border-gray-300 p-5">
             <p className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-1">
-              Dossier pré-analysé — 8 bases interrogées
+              Dossier pré-analysé — 14 bases interrogées
             </p>
             <h3 className="text-xl font-extrabold text-bleu-france leading-tight mb-3">
               {selectedAddress?.properties.label}
@@ -206,7 +171,9 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
                   <span>Zone PLU : <span className="text-bleu-france">{erpData.zonePLU}</span></span>
                 </div>
               )}
-              {erpData.anneeConstruction && erpData.anneeConstruction !== "Non disponible" && (
+              {erpData.anneeConstruction
+                && erpData.anneeConstruction !== "Non disponible"
+                && erpData.anneeConstruction !== "Non recensée" && (
                 <div className="inline-flex items-center gap-1 bg-white border border-gray-300 px-3 py-1 text-xs font-bold text-gray-700 shadow-sm">
                   <span>🏗️</span>
                   <span>Construit en <span className="text-bleu-france">{erpData.anneeConstruction}</span></span>
@@ -242,7 +209,9 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
                         {erpData.parcelleNumero}
                       </p>
                     </div>
-                    {erpData.anneeConstruction && erpData.anneeConstruction !== "Non disponible" && (
+                    {erpData.anneeConstruction
+                      && erpData.anneeConstruction !== "Non disponible"
+                      && erpData.anneeConstruction !== "Non recensée" && (
                       <>
                         <div className="text-gray-300 text-xl font-thin">|</div>
                         <div className="text-center">
@@ -428,31 +397,60 @@ export default function AddressSearch({ onResultsChange, onAddressSelect, onParc
                 </div>
               </div>
 
-              {/* Bouton principal — pas de prix affiché */}
+              {/* Bouton principal — MODE TEST : téléchargement direct sans paiement */}
               <button
-                onClick={() => {
-                  if (!selectedAddress || !erpData) return;
-                  // Sauvegarder les données en session pour les retrouver dans l'espace
-                  localStorage.setItem('geodiag_erp',     JSON.stringify(erpData));
-                  localStorage.setItem('geodiag_address', JSON.stringify(selectedAddress));
-                  // Construire la ref de la parcelle pour l'URL (ex: 33063000CW0162)
-                  const ref = (erpData.parcelleRef && erpData.parcelleRef !== '–')
-                    ? erpData.parcelleRef
-                    : selectedAddress.properties.id;
-                  const [lng, lat] = selectedAddress.geometry.coordinates;
-                  const params = new URLSearchParams({
-                    adresse: selectedAddress.properties.label,
-                    lat:     String(lat),
-                    lng:     String(lng),
-                    insee:   selectedAddress.properties.citycode,
-                    city:    selectedAddress.properties.city || '',
-                  });
-                  window.location.href = `/commande/${encodeURIComponent(ref)}?${params.toString()}`;
+                disabled={isPdfLoading}
+                onClick={async () => {
+                  if (!selectedAddress || !erpData || isPdfLoading) return;
+                  setIsPdfLoading(true);
+                  try {
+                    const [lng, lat] = selectedAddress.geometry.coordinates;
+                    // POST : on envoie directement erpData pour éviter le deadlock Next.js
+                    const res = await fetch('/api/erp-pdf', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        adresse: selectedAddress.properties.label,
+                        lat:     lat,
+                        lon:     lng,
+                        insee:   selectedAddress.properties.citycode,
+                        city:    selectedAddress.properties.city || '',
+                        erpData: erpData,
+                      }),
+                    });
+                    if (!res.ok) throw new Error(`Erreur PDF: ${res.status}`);
+                    const blob = await res.blob();
+                    const url  = URL.createObjectURL(blob);
+                    const a    = document.createElement('a');
+                    a.href     = url;
+                    a.download = `ERP_${selectedAddress.properties.label.replace(/\s+/g, '_')}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error('[PDF]', err);
+                    alert('Erreur lors de la génération du PDF. Vérifiez la console.');
+                  } finally {
+                    setIsPdfLoading(false);
+                  }
                 }}
-                className="shrink-0 bg-bleu-france hover:bg-bleu-france-hover text-white font-bold py-3 px-8 text-sm transition-colors flex items-center gap-2 shadow-dsfr"
+                className="shrink-0 bg-bleu-france hover:bg-bleu-france-hover disabled:opacity-60 text-white font-bold py-3 px-8 text-sm transition-colors flex items-center gap-2 shadow-dsfr"
               >
-                Étape suivante
-                <span aria-hidden="true" className="text-base">→</span>
+                {isPdfLoading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    Génération…
+                  </>
+                ) : (
+                  <>
+                    Télécharger mon rapport
+                    <span aria-hidden="true" className="text-base">⬇</span>
+                  </>
+                )}
               </button>
             </div>
 

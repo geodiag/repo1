@@ -1,4 +1,10 @@
 import { NextResponse } from 'next/server';
+import type { DvfTransaction, BruitAerodrome, SisDetail, IcpeProximite, MvtDetail, BatimentInfo } from '@/lib/types';
+import { getBatimentByCoords, meilleurAnneeConstruction } from '@/lib/bdnb';
+
+// ⚠️ IMPORTANT : Forcer le mode dynamique pour que Next.js ne mette JAMAIS en cache
+// cette route. Sans ça, toutes les adresses recevraient les données de la première requête.
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -17,19 +23,44 @@ export async function GET(request: Request) {
       'User-Agent': 'Geodiag-SaaS/1.0'
     };
 
+    // ── URLs des 9 endpoints existants ───────────────────────────────────────
     const urlRisques    = `https://georisques.gouv.fr/api/v1/gaspar/risques?latlon=${lng},${lat}&rayon=100`;
     const urlRadon      = `https://georisques.gouv.fr/api/v1/radon?code_insee=${insee}`;
     const urlCatnat     = `https://georisques.gouv.fr/api/v1/catnat?code_insee=${insee}&page=1&page_size=1`;
     const urlSismicite  = `https://georisques.gouv.fr/api/v1/zonage_sismique?latlon=${lng},${lat}`;
-    const urlDpe        = `https://data.ademe.fr/data-fair/api/v1/datasets/dpe-v2-logements-existants/lines?size=1&q=${encodeURIComponent(label || '')}`;
+    // ── Requête ADEME : on cible le code_insee + nom de rue (sans ville/CP pour éviter le bruit)
+    // L'API data-fair accepte `qs` en syntaxe Elasticsearch et `q` pour le texte libre.
+    // On extrait uniquement le début du label (avant la virgule ou le code postal) pour ne garder
+    // que le numéro + nom de rue, et on filtre par code INSEE commune.
+    const streetOnly = (label || '').replace(/\s+\d{5}\s+\w.*$/, '').trim(); // "13 Rue Etienne Dusart"
+    const urlDpe = `https://data.ademe.fr/data-fair/api/v1/datasets/dpe-v2-logements-existants/lines`
+      + `?size=3`
+      + `&qs=${encodeURIComponent(`code_commune_insee_ban:"${insee}"`)}`
+      + `&q=${encodeURIComponent(streetOnly)}`
+      + `&q_fields=adresse_ban`
+      + `&sort=-_score`;
     const urlCadastre   = `https://apicarto.ign.fr/api/cadastre/parcelle?lon=${lng}&lat=${lat}`;
     const urlGPU        = `https://apicarto.ign.fr/api/gpu/zone-urba?geom=${encodeURIComponent(JSON.stringify({ type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] }))}`;
     const urlDVF        = `https://api.dvf.etalab.gouv.fr/geomap/mutations?lat=${lat}&lon=${lng}&dist=300`;
     const urlBruit      = `https://georisques.gouv.fr/api/v1/bruit_aerodromes?latlon=${lng},${lat}&rayon=30000`;
 
-    console.log("📡 Interrogation des bases de l'État (v4 — ERP+ENSA)...");
+    // ── URLs des 4 NOUVEAUX endpoints (SIS, ICPE, MVT, Cavités) ─────────────
+    const urlSIS        = `https://georisques.gouv.fr/api/v1/sis?latlon=${lng},${lat}&rayon=500`;
+    const urlICPE       = `https://georisques.gouv.fr/api/v1/installations_classees?latlon=${lng},${lat}&rayon=500&page=1&page_size=10`;
+    const urlMVT        = `https://georisques.gouv.fr/api/v1/mvt?latlon=${lng},${lat}&rayon=500`;
+    const urlCavites    = `https://georisques.gouv.fr/api/v1/cavites?latlon=${lng},${lat}&rayon=500`;
 
-    const [resRisques, resRadon, resCatnat, resSismicite, resDpe, resCadastre, resGPU, resDVF, resBruit] = await Promise.all([
+    console.log("📡 Interrogation des bases de l'État (v6 — ERP+ENSA+SIS+ICPE+MVT+Cavités+BDNB)...");
+
+    // ── Appels parallèles : 14 API en même temps ─────────────────────────────
+    // Chaque fetch a son .catch individuel pour la Graceful Degradation
+    // La BDNB est appelée en parallèle via getBatimentByCoords (graceful degradation intégrée)
+    const [
+      resRisques, resRadon, resCatnat, resSismicite, resDpe,
+      resCadastre, resGPU, resDVF, resBruit,
+      resSIS, resICPE, resMVT, resCavites,
+      batimentBDNB,
+    ] = await Promise.all([
       fetch(urlRisques,   { headers, cache: 'no-store' }).catch(() => null),
       fetch(urlRadon,     { headers, cache: 'no-store' }).catch(() => null),
       fetch(urlCatnat,    { headers, cache: 'no-store' }).catch(() => null),
@@ -39,8 +70,16 @@ export async function GET(request: Request) {
       fetch(urlGPU,       { headers, cache: 'no-store' }).catch(() => null),
       fetch(urlDVF,       { headers, cache: 'no-store' }).catch(() => null),
       fetch(urlBruit,     { headers, cache: 'no-store' }).catch(() => null),
+      // Nouveaux endpoints Géorisques
+      fetch(urlSIS,       { headers, cache: 'no-store' }).catch(() => null),
+      fetch(urlICPE,      { headers, cache: 'no-store' }).catch(() => null),
+      fetch(urlMVT,       { headers, cache: 'no-store' }).catch(() => null),
+      fetch(urlCavites,   { headers, cache: 'no-store' }).catch(() => null),
+      // BDNB — Base de Données Nationale des Bâtiments
+      getBatimentByCoords(parseFloat(lat), parseFloat(lng)),
     ]);
 
+    // ── Parsing JSON avec fallback ───────────────────────────────────────────
     const dataRisques   = resRisques?.ok   ? await resRisques.json().catch(()   => ({ data: [] }))     : { data: [] };
     const dataRadon     = resRadon?.ok     ? await resRadon.json().catch(()     => ({ data: [] }))     : { data: [] };
     const dataCatnat    = resCatnat?.ok    ? await resCatnat.json().catch(()    => ({ data: [], total: 0 })) : { data: [], total: 0 };
@@ -50,6 +89,11 @@ export async function GET(request: Request) {
     const dataGPU       = resGPU?.ok       ? await resGPU.json().catch(()       => ({ features: [] })) : { features: [] };
     const dataDVF       = resDVF?.ok       ? await resDVF.json().catch(()       => ({ features: [] })) : { features: [] };
     const dataBruit     = resBruit?.ok     ? await resBruit.json().catch(()     => ({ data: [] }))     : { data: [] };
+    // Nouveaux
+    const dataSIS       = resSIS?.ok       ? await resSIS.json().catch(()       => ({ data: [] }))     : { data: [] };
+    const dataICPE      = resICPE?.ok      ? await resICPE.json().catch(()      => ({ data: [] }))     : { data: [] };
+    const dataMVT       = resMVT?.ok       ? await resMVT.json().catch(()       => ({ data: [] }))     : { data: [] };
+    const dataCavites   = resCavites?.ok   ? await resCavites.json().catch(()   => ({ data: [] }))     : { data: [] };
 
     // Debug (à retirer en prod)
     console.log("🔍 Bruit aérodromes raw:", JSON.stringify(dataBruit).substring(0, 300));
@@ -57,6 +101,10 @@ export async function GET(request: Request) {
     console.log("🔍 Catnat raw:", JSON.stringify(dataCatnat).substring(0, 200));
     console.log("🔍 Sismicité raw:", JSON.stringify(dataSismicite).substring(0, 200));
     console.log("🔍 Cadastre raw:", JSON.stringify(dataCadastre).substring(0, 300));
+    console.log("🔍 SIS raw:", JSON.stringify(dataSIS).substring(0, 300));
+    console.log("🔍 ICPE raw:", JSON.stringify(dataICPE).substring(0, 300));
+    console.log("🔍 MVT raw:", JSON.stringify(dataMVT).substring(0, 300));
+    console.log("🔍 Cavités raw:", JSON.stringify(dataCavites).substring(0, 300));
 
     // ── 1. Risques naturels & technologiques ──────────────────────────────────
     const rawRisques    = dataRisques.data || [];
@@ -89,7 +137,6 @@ export async function GET(request: Request) {
     }
 
     // ── 3. CATNAT — total des arrêtés sur la commune ──────────────────────────
-    // L'API retourne `total` (nombre total) ou on compte le tableau `data`
     const nbCatnat = dataCatnat.total ?? dataCatnat.data?.length ?? 0;
 
     // ── 4. Sismicité — zone réelle depuis l'API ───────────────────────────────
@@ -111,21 +158,33 @@ export async function GET(request: Request) {
       }
     }
 
-    // ── 5. ADEME / DPE ───────────────────────────────────────────────────────
-    let anneeConstruction = "Non recensée";
-    if (dataDpe.results?.length > 0 && dataDpe.results[0].annee_construction) {
-      anneeConstruction = dataDpe.results[0].annee_construction.toString();
+    // ── 5. ADEME / DPE + croisement BDNB ────────────────────────────────────
+    // On récupère d'abord l'année ADEME (jusqu'à 3 résultats, on prend le premier avec une année valide),
+    // puis on croise avec la BDNB.
+    // Champs possibles selon la version du dataset : annee_construction ou annee_construction_dpe
+    let anneeAdeme = "Non recensée";
+    const dpeRows: any[] = dataDpe.results || dataDpe.data || [];
+    console.log(`🏠 ADEME DPE: ${dpeRows.length} résultat(s) pour "${streetOnly}" (INSEE ${insee})`);
+    for (const row of dpeRows) {
+      const annee = row.annee_construction ?? row.annee_construction_dpe ?? null;
+      if (annee && Number(annee) > 1700 && Number(annee) <= new Date().getFullYear()) {
+        anneeAdeme = String(annee);
+        break;
+      }
     }
+    const anneeConstruction = meilleurAnneeConstruction(
+      batimentBDNB?.anneeConstruction ?? null,
+      anneeAdeme
+    );
+
+    console.log("🏠 BDNB:", batimentBDNB ? `trouvé (${batimentBDNB.typeBatiment}, ${batimentBDNB.anneeConstruction})` : "non trouvé");
 
     // ── 6. Cadastre IGN ───────────────────────────────────────────────────────
-    // contenance = surface en m² (peut aussi être en ares selon source)
-    // On filtre les valeurs aberrantes (> 5 000 m² = probablement pas une parcelle résidentielle)
     let parcelleSurface = "Non disponible";
     let parcelleRef    = "–";
     let parcelleSection = "–";
     let parcelleNumero  = "–";
     let parcelleCommune = "–";
-    // Géométrie GeoJSON brute de la parcelle (polygone), renvoyée au front pour affichage sur la carte
     let parcelleGeoJSON: object | null = null;
 
     const parcelle = dataCadastre.features?.[0];
@@ -133,30 +192,41 @@ export async function GET(request: Request) {
       const props = parcelle.properties || {};
 
       // ── Surface ────────────────────────────────────────────────────────────
-      const raw = props.contenance ?? props.surface ?? null;
-      if (raw) {
-        const surfaceM2 = raw <= 500 ? raw * 100 : raw; // conversion ares → m²
+      // APICarto IGN : contenance est en CENTIARES (= m², pas en ares)
+      // 1 centiare = 1 m² → aucune conversion nécessaire
+      const rawContenance = props.contenance ?? props.surface ?? null;
+      if (rawContenance) {
+        const surfaceM2 = Number(rawContenance);
         parcelleSurface = surfaceM2 <= 5000
           ? `${Math.round(surfaceM2).toLocaleString('fr-FR')} m²`
           : `${Math.round(surfaceM2).toLocaleString('fr-FR')} m² (terrain)`;
       }
 
       // ── Références cadastrales ─────────────────────────────────────────────
-      const dept    = props.departmentcode || props.dep || "";
-      const commune = props.municipalitycode || props.commune || "";
-      const section = props.section || "";
-      const numero  = props.numero || props.number || "";
+      // Champs réels APICarto IGN : code_dep, code_com, com_abs, section, numero, idu
+      // L'IDU (Identifiant Unique) est pré-calculé par IGN : code_dep + code_com + com_abs + section + numero
+      // ex : "39200000BA0187"
+      const codeDep  = props.code_dep           || props.departmentcode  || props.dep      || "";
+      const codeCom  = props.code_com           || props.municipalitycode || props.commune  || "";
+      const comAbs   = props.com_abs            || "000";
+      const section  = props.section            || "";
+      const numero   = props.numero             || props.number           || "";
+      const idu      = props.idu                || "";   // référence complète IGN
 
       parcelleSection = section || "–";
       parcelleNumero  = numero  || "–";
-      parcelleCommune = commune || "–";
+      parcelleCommune = codeCom ? `${codeDep}${codeCom}` : "–";
 
-      if (section && numero) {
-        parcelleRef = `${dept}${commune} ${section}${numero}`.trim();
+      // Priorité à l'IDU fourni directement par IGN, sinon reconstitution manuelle
+      if (idu) {
+        parcelleRef = idu;
+      } else if (section && numero) {
+        parcelleRef = `${codeDep}${codeCom}${comAbs}${section}${numero}`.trim();
       }
 
+      console.log(`🏛️ Cadastre: section=${section}, numero=${numero}, idu=${idu}, ref=${parcelleRef}`);
+
       // ── Géométrie polygonale (GeoJSON Feature complet) ────────────────────
-      // On renvoie le Feature entier : L.geoJSON() de Leaflet l'accepte directement
       if (parcelle.geometry) {
         parcelleGeoJSON = {
           type: "Feature",
@@ -179,9 +249,6 @@ export async function GET(request: Request) {
     }
 
     // ── 8. DVF – transactions récentes ───────────────────────────────────────
-    interface DvfTransaction {
-      date: string; prix: number; surface: number | null; type: string; prixM2: number | null;
-    }
     let transactionsRecentes: DvfTransaction[] = [];
     let prixMoyen = "Non disponible";
 
@@ -214,10 +281,6 @@ export async function GET(request: Request) {
     }
 
     // ── 9. ENSA – Plan d'Exposition au Bruit (PEB) ────────────────────────────
-    interface BruitAerodrome {
-      nom: string;
-      codePEB: string;
-    }
     let ensaConcerne = false;
     let ensaAerodromes: BruitAerodrome[] = [];
 
@@ -235,9 +298,71 @@ export async function GET(request: Request) {
       });
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NOUVEAUX : SIS, ICPE, Mouvements de terrain, Cavités
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // ── 10. SIS — Secteurs d'Information sur les Sols ─────────────────────────
+    // Identifie les terrains où une pollution des sols est connue ou suspectée
+    // (anciens sites industriels, décharges, etc.)
+    let sisConcerne = false;
+    let sisDetails: SisDetail[] = [];
+
+    const sisData = dataSIS.data || [];
+    if (sisData.length > 0) {
+      sisConcerne = true;
+      sisDetails = sisData.slice(0, 5).map((item: any) => ({
+        nom: item.nom ?? item.libelle ?? item.nom_sis ?? "Secteur non nommé",
+        description: item.description ?? item.commentaire ?? item.activite ?? "Aucune description disponible",
+      }));
+    }
+
+    // ── 11. ICPE — Installations Classées pour la Protection de l'Environnement ─
+    // Sites industriels soumis à autorisation/enregistrement/déclaration à proximité
+    let icpeConcerne = false;
+    let icpeProximite: IcpeProximite[] = [];
+
+    const icpeData = dataICPE.data || [];
+    if (icpeData.length > 0) {
+      icpeConcerne = true;
+      icpeProximite = icpeData.slice(0, 10).map((item: any) => ({
+        nom: item.nom_ets ?? item.raison_sociale ?? item.nom ?? "Installation non nommée",
+        regime: item.regime ?? item.libelle_regime ?? item.seveso ?? "Non précisé",
+        distance: item.distance ?? 0,
+      }));
+    }
+
+    // ── 12. MVT — Mouvements de terrain ──────────────────────────────────────
+    // Glissements, effondrements, coulées, éboulements, érosion
+    let mvtConcerne = false;
+    let mvtDetails: MvtDetail[] = [];
+
+    const mvtData = dataMVT.data || [];
+    if (mvtData.length > 0) {
+      mvtConcerne = true;
+      mvtDetails = mvtData.slice(0, 5).map((item: any) => ({
+        type: item.type_mvt ?? item.libelle ?? item.nature ?? "Type non précisé",
+        date: item.date_debut ?? item.date ?? item.annee ?? "Date inconnue",
+      }));
+    }
+
+    // ── 13. Cavités souterraines ─────────────────────────────────────────────
+    // Cavités naturelles ou artificielles (carrières, mines, marnières)
+    let cavitesConcerne = false;
+    let cavitesProximite = 0;
+
+    const cavitesData = dataCavites.data || [];
+    if (cavitesData.length > 0) {
+      cavitesConcerne = true;
+      cavitesProximite = cavitesData.length;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+
     return NextResponse.json({
       success: true,
       risques: {
+        // Existants
         inondation, technologique,
         sismicite, potentielRadon, nbCatnat,
         anneeConstruction,
@@ -245,6 +370,13 @@ export async function GET(request: Request) {
         zonePLU, codeZonePLU, libelleZone,
         transactionsRecentes, prixMoyen,
         ensaConcerne, ensaAerodromes,
+        // Nouveaux — Géorisques
+        sisConcerne, sisDetails,
+        icpeConcerne, icpeProximite,
+        mvtConcerne, mvtDetails,
+        cavitesConcerne, cavitesProximite,
+        // BDNB — Bâtiment enrichi
+        batiment: batimentBDNB,
       }
     });
 
