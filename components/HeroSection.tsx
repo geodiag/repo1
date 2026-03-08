@@ -5,8 +5,8 @@ import dynamic from "next/dynamic";
 import AddressSearch from "./AddressSearch";
 import ReassuranceBlock from "./ReassuranceBlock";
 
-// MapExplorer est client-only — on l'exclut du SSR
-const MapExplorer = dynamic(() => import("./MapExplorer"), { ssr: false });
+// ParcelMap est client-only — MapLibre GL requiert le DOM / WebGL
+const ParcelMap = dynamic(() => import("./ParcelMap"), { ssr: false });
 
 interface MapCoords {
   lat: number;
@@ -73,13 +73,11 @@ export default function HeroSection() {
         {/* ── Carte mobile (lg:hidden) — visible sur mobile uniquement ── */}
         {mapCoords && (
           <div className="lg:hidden aspect-video border-2 border-white shadow-dsfr overflow-hidden">
-            <MapExplorer
+            <ParcelMap
               lat={mapCoords.lat}
               lng={mapCoords.lng}
               parcelGeometry={parcelData?.geoJSON}
               parcelRef={parcelData?.ref}
-              parcelSection={parcelData?.section}
-              parcelNumero={parcelData?.numero}
               height="100%"
             />
           </div>
@@ -93,19 +91,17 @@ export default function HeroSection() {
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════
-          COLONNE DROITE — MapExplorer sticky (desktop uniquement)
-          Montée uniquement après saisie d'une adresse pour éviter
-          les requêtes WMS/WFS inutiles au chargement de la page.
+          COLONNE DROITE — ParcelMap sticky (desktop uniquement)
+          Montée uniquement après saisie d'une adresse — zéro requête
+          réseau au chargement de la page (MapLibre + WFS).
       ══════════════════════════════════════════════════════════════════ */}
       <div className="hidden lg:flex sticky top-0 h-screen items-center justify-center bg-[#e8e4dc]">
         {mapCoords ? (
-          <MapExplorer
+          <ParcelMap
             lat={mapCoords.lat}
             lng={mapCoords.lng}
             parcelGeometry={parcelData?.geoJSON}
             parcelRef={parcelData?.ref}
-            parcelSection={parcelData?.section}
-            parcelNumero={parcelData?.numero}
             height="100%"
           />
         ) : (
